@@ -1,49 +1,162 @@
 import express from "express";
 import { z } from "zod";
-import { allocation, holdings, portfolioSummary } from "../data/mockData.js";
+import { prisma } from "../db.js";
+import { requireAuth } from "../middleware/auth.js";
 import { created, error, ok } from "../utils/apiResponse.js";
+// Mock data summary structures untouched for phase 1 transition
+import { allocation, portfolioSummary } from "../data/mockData.js";
 
 export const portfolioRouter = express.Router();
 
+portfolioRouter.use(requireAuth);
+
 const holdingSchema = z.object({
   symbol: z.string().min(1).transform((value) => value.toUpperCase()),
-  name: z.string().min(1),
-  qty: z.number().positive(),
-  avgCost: z.number().positive(),
-  currentPrice: z.number().positive(),
-  sector: z.string().min(1)
+  name: z.string().optional(),
+  qty: z.number().nonnegative(),
+  avgCost: z.number().nonnegative(),
+  productType: z.string().optional(),
+  currentPrice: z.number().nonnegative().optional()
 });
 
-portfolioRouter.get("/summary", (req, res) => ok(res, portfolioSummary));
-portfolioRouter.get("/holdings", (req, res) => ok(res, holdings));
-portfolioRouter.get("/allocation", (req, res) => ok(res, allocation));
+const bulkHoldingsSchema = z.array(holdingSchema);
 
-portfolioRouter.post("/holdings", (req, res) => {
-  const parsed = holdingSchema.safeParse(req.body);
-  if (!parsed.success) return error(res, 400, "Invalid holding data", parsed.error.flatten());
-
-  const holding = {
-    id: `h${holdings.length + 1}`,
-    ...parsed.data,
-    changePercent: 0,
-    pnl: Number(((parsed.data.currentPrice - parsed.data.avgCost) * parsed.data.qty).toFixed(2))
-  };
-  holdings.push(holding);
-  return created(res, holding, "Holding added for analysis");
+portfolioRouter.get("/summary", async (req, res) => {
+  try {
+    const holdings = await prisma.portfolioHolding.findMany({ where: { userId: req.userId } });
+    
+    const totalInvestment = holdings.reduce((sum, h) => sum + h.qty * h.avgCost, 0);
+    const currentValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
+    const totalReturns = currentValue - totalInvestment;
+    
+    return ok(res, {
+      totalInvestment: Math.round(totalInvestment),
+      currentValue: Math.round(currentValue),
+      totalReturns: Math.round(totalReturns),
+      todayChange: 0, // Mocked until live feed integrated
+      todayChangePercent: 0,
+      riskScore: 65,
+      diversification: holdings.length > 5 ? "Well diversified" : "Concentrated"
+    });
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Error calculating summary");
+  }
 });
 
-portfolioRouter.patch("/holdings/:id", (req, res) => {
-  const holding = holdings.find((item) => item.id === req.params.id);
-  if (!holding) return error(res, 404, "Holding not found");
+portfolioRouter.get("/allocation", async (req, res) => {
+  try {
+    const holdings = await prisma.portfolioHolding.findMany({ where: { userId: req.userId } });
+    const totalValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
+    
+    if (totalValue === 0) return ok(res, []);
 
-  Object.assign(holding, req.body);
-  return ok(res, holding, "Holding updated");
+    // Group by symbol for now (since Sector is missing in CSV)
+    const grouped = holdings.reduce((acc, h) => {
+      const val = h.qty * (h.currentPrice || h.avgCost);
+      acc[h.symbol] = (acc[h.symbol] || 0) + val;
+      return acc;
+    }, {});
+
+    const allocationList = Object.entries(grouped).map(([name, val]) => ({
+      name,
+      value: parseFloat(((val / totalValue) * 100).toFixed(2))
+    }));
+
+    return ok(res, allocationList);
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Error calculating allocation");
+  }
 });
 
-portfolioRouter.delete("/holdings/:id", (req, res) => {
-  const index = holdings.findIndex((item) => item.id === req.params.id);
-  if (index === -1) return error(res, 404, "Holding not found");
+portfolioRouter.post("/bulk", async (req, res) => {
+  try {
+    const parsed = bulkHoldingsSchema.safeParse(req.body);
+    if (!parsed.success) return error(res, 400, "Invalid bulk data", parsed.error.flatten());
 
-  const [removed] = holdings.splice(index, 1);
-  return ok(res, removed, "Holding removed");
+    // Transaction: Clear current holdings and insert new ones
+    await prisma.$transaction([
+      prisma.portfolioHolding.deleteMany({ where: { userId: req.userId } }),
+      prisma.portfolioHolding.createMany({
+        data: parsed.data.map(h => ({
+          ...h,
+          name: h.name || h.symbol,
+          userId: req.userId
+        }))
+      })
+    ]);
+
+    return ok(res, { count: parsed.data.length }, "Portfolio bulk updated successfully");
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Error performing bulk import");
+  }
+});
+
+portfolioRouter.get("/holdings", async (req, res) => {
+  try {
+    const userHoldings = await prisma.portfolioHolding.findMany({
+      where: { userId: req.userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Add computed metrics on the fly before dispatch
+    const enrichedHoldings = userHoldings.map(h => ({
+      ...h,
+      changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
+      pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
+    }));
+    
+    return ok(res, enrichedHoldings);
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Error fetching holdings");
+  }
+});
+
+portfolioRouter.post("/holdings", async (req, res) => {
+  try {
+    const parsed = holdingSchema.safeParse(req.body);
+    if (!parsed.success) return error(res, 400, "Invalid holding data", parsed.error.flatten());
+
+    const newHolding = await prisma.portfolioHolding.create({
+      data: {
+        userId: req.userId,
+        ...parsed.data,
+        name: parsed.data.name || parsed.data.symbol
+      }
+    });
+    return created(res, newHolding, "Holding added successfully");
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Error creating holding");
+  }
+});
+
+portfolioRouter.patch("/holdings/:id", async (req, res) => {
+  try {
+    const updatedUserHolding = await prisma.portfolioHolding.updateMany({
+      where: { id: req.params.id, userId: req.userId },
+      data: req.body
+    });
+    if (updatedUserHolding.count === 0) return error(res, 404, "Holding not found or unauthorized");
+    return ok(res, null, "Holding updated");
+  } catch(err) {
+    console.error(err);
+    return error(res, 500, "Failed to update holding");
+  }
+});
+
+portfolioRouter.delete("/holdings/:id", async (req, res) => {
+  try {
+    const deleteCount = await prisma.portfolioHolding.deleteMany({
+      where: { id: req.params.id, userId: req.userId }
+    });
+    if (deleteCount.count === 0) return error(res, 404, "Holding not found or unauthorized");
+    return ok(res, null, "Holding removed successfully");
+  } catch(err) {
+    console.error(err);
+    return error(res, 500, "Failed to delete holding");
+  }
 });

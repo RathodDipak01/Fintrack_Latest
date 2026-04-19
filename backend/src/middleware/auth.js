@@ -1,28 +1,31 @@
-import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 import { error } from "../utils/apiResponse.js";
+import { env } from "../config/env.js";
 
-const sessions = new Map();
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_super_secret_dev_key";
 
 export function createSession(userId) {
-  const token = crypto.randomBytes(24).toString("hex");
-  sessions.set(token, { userId, createdAt: new Date().toISOString() });
-  return token;
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
 export function destroySession(token) {
-  sessions.delete(token);
+  // Can implement blacklist or trust short expiries.
 }
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  const session = sessions.get(token);
-
-  if (!session) {
+  
+  if (!token) {
     return error(res, 401, "Authentication required");
   }
 
-  req.userId = session.userId;
-  req.token = token;
-  return next();
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.userId = payload.userId;
+    req.token = token;
+    return next();
+  } catch (err) {
+    return error(res, 401, "Invalid or expired token");
+  }
 }

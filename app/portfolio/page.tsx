@@ -1,19 +1,49 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, Plus, Upload, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { AllocationChart } from "@/components/charts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader, StatCard } from "@/components/ui";
-import { allocationData, holdings } from "@/lib/portfolio-data";
+import { allocationData } from "@/lib/portfolio-data";
+import { fintrackApi } from "@/lib/api";
 
-type SortField = "symbol" | "qty" | "avg" | "price" | "change" | "pnl";
+type SortField = "symbol" | "qty" | "avg" | "price" | "change" | "pnl" | "productType";
 type SortDirection = "asc" | "desc";
 
 export default function PortfolioPage() {
   const [sortField, setSortField] = useState<SortField>("symbol");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [liveHoldings, setLiveHoldings] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [allocation, setAllocation] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fintrackApi.getHoldings(),
+      fintrackApi.getSummary(),
+      fintrackApi.getAllocation()
+    ]).then(([hData, sData, aData]) => {
+      const mapped = (hData || []).map((h: any) => ({
+        ...h,
+        avg: h.avgCost,
+        price: h.currentPrice,
+        change: h.changePercent,
+        pnl: String(h.pnl),
+        productType: h.productType || "CNC"
+      }));
+      setLiveHoldings(mapped);
+      setSummary(sData);
+      setAllocation(aData || []);
+    }).catch(err => {
+      console.error(err);
+      if (err.message.includes("Authentication") || err.message.includes("401")) {
+        setLiveHoldings([]);
+      }
+    }).finally(() => setIsLoading(false));
+  }, []);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -25,7 +55,7 @@ export default function PortfolioPage() {
   };
 
   const sortedHoldings = useMemo(() => {
-    return [...holdings].sort((a, b) => {
+    return [...liveHoldings].sort((a, b) => {
       let valA: string | number = a[sortField as keyof typeof a];
       let valB: string | number = b[sortField as keyof typeof b];
 
@@ -78,10 +108,10 @@ export default function PortfolioPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total investment" value="₹39.22L" change="+12.6%" />
-        <StatCard label="Current value" value="₹48.72L" change="+24.2%" tone="profit" />
-        <StatCard label="Unrealized P&L" value="₹9.50L" change="+₹84K MoM" tone="ai" />
-        <StatCard label="Holdings" value={String(holdings.length)} change="Mock data" tone="warn" />
+        <StatCard label="Total investment" value={`₹${(summary?.totalInvestment || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" />
+        <StatCard label="Current value" value={`₹${(summary?.currentValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="profit" />
+        <StatCard label="Unrealized P&L" value={`₹${(summary?.totalReturns || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="ai" />
+        <StatCard label="Holdings" value={String(liveHoldings.length)} change={isLoading ? "Loading..." : "Live"} tone="warn" />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
@@ -105,13 +135,24 @@ export default function PortfolioPage() {
                   {renderHeader("Qty", "qty")}
                   {renderHeader("Avg cost", "avg")}
                   {renderHeader("Current", "price")}
+                  {renderHeader("Type", "productType")}
                   {renderHeader("% Change", "change")}
                   {renderHeader("Total P&L", "pnl")}
                   <th className="px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedHoldings.map((stock) => (
+                 {isLoading && (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-500">Loading live portfolio positions...</td>
+                  </tr>
+                )}
+                {!isLoading && sortedHoldings.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-500">No holdings found. Please login or add assets.</td>
+                  </tr>
+                )}
+                {!isLoading && sortedHoldings.map((stock) => (
                   <tr key={stock.symbol} className="rounded-lg bg-white/[0.035] text-sm text-slate-300 transition hover:bg-white/[0.07]">
                     <td className="rounded-l-lg px-3 py-4">
                       <div className="flex items-center gap-3">
@@ -125,6 +166,11 @@ export default function PortfolioPage() {
                     <td className="px-3 py-4">{stock.qty}</td>
                     <td className="px-3 py-4">₹{stock.avg}</td>
                     <td className="px-3 py-4">₹{stock.price}</td>
+                    <td className="px-3 py-4 text-xs font-semibold">
+                      <span className={`rounded px-2 py-1 ${stock.productType === 'MIS' ? 'bg-orange-500/10 text-orange-400' : 'bg-green-500/10 text-green-400'}`}>
+                        {stock.productType}
+                      </span>
+                    </td>
                     <td className={`px-3 py-4 font-semibold ${stock.change >= 0 ? "text-profit" : "text-loss"}`}>{stock.change}%</td>
                     <td className={`px-3 py-4 font-semibold ${stock.pnl.startsWith("-") ? "text-loss" : "text-profit"}`}>₹{stock.pnl}</td>
                     <td className="rounded-r-lg px-3 py-4">
@@ -141,17 +187,17 @@ export default function PortfolioPage() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Allocation" title="Sector breakdown" action={<Pill tone="warn">Concentrated</Pill>} />
+          <SectionHeader eyebrow="Allocation" title="Stock breakdown" action={<Pill tone="warn">{summary?.diversification || "Analyzing"}</Pill>} />
           <AllocationChart />
           <div className="space-y-3">
-            {allocationData.map((item) => (
+            {allocation.map((item) => (
               <div key={item.name}>
                 <div className="mb-1 flex justify-between text-sm">
                   <span className="text-slate-300">{item.name}</span>
                   <span className="text-slate-500">{item.value}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-white/10">
-                  <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }} />
+                  <div className="h-full rounded-full bg-ai" style={{ width: `${item.value}%` }} />
                 </div>
               </div>
             ))}

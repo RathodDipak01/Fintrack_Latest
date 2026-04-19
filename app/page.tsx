@@ -24,12 +24,11 @@ import { GlassCard, Pill, SectionHeader, StatCard } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { MarketTicker } from "@/components/market-ticker";
+import { fintrackApi } from "@/lib/api";
 import {
   alerts,
-  allocationData,
   analystRatings,
   companyInsights,
-  holdings,
   keyEvents,
   sentimentDetails,
   shareholdingPatterns,
@@ -126,7 +125,8 @@ function Sidebar() {
   );
 }
 
-function Hero() {
+function Hero({ summary }: { summary: any }) {
+  const netWorth = summary?.currentValue || 0;
   return (
     <section id="dashboard" className="grid gap-5 xl:grid-cols-[1.35fr_0.85fr]">
       <GlassCard className="relative overflow-hidden p-6 md:p-8">
@@ -135,7 +135,7 @@ function Hero() {
           <div>
             <Pill tone="ai">AI risk engine active</Pill>
             <p className="mt-6 text-sm text-slate-400">Net worth</p>
-            <h1 className="mt-2 text-4xl font-bold tracking-normal text-white md:text-6xl">₹48,72,940</h1>
+            <h1 className="mt-2 text-4xl font-bold tracking-normal text-white md:text-6xl">₹{netWorth.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <span className="rounded-md bg-profit/10 px-3 py-2 text-sm font-semibold text-profit">+₹1,24,800 today</span>
               <span className="rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300">+2.63% vs +0.84% NIFTY50</span>
@@ -181,13 +181,14 @@ function Hero() {
   );
 }
 
-function Stats() {
+function Stats({ summary }: { summary: any }) {
+  const format = (val: number) => `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Total investment" value="₹39.22L" change="+12.6%" />
-      <StatCard label="Current value" value="₹48.72L" change="+24.2%" tone="profit" />
-      <StatCard label="Total returns" value="₹9.50L" change="+₹84K MoM" tone="ai" />
-      <StatCard label="Risk score" value="62/100" change="Medium" tone="warn" />
+      <StatCard label="Total investment" value={format(summary?.totalInvestment || 0)} change="+0%" />
+      <StatCard label="Current value" value={format(summary?.currentValue || 0)} change="+0%" tone="profit" />
+      <StatCard label="Total returns" value={format(summary?.totalReturns || 0)} change="+0%" tone="ai" />
+      <StatCard label="Risk score" value={`${summary?.riskScore || 0}/100`} change={summary?.diversification || "Analyzing"} tone="warn" />
     </section>
   );
 }
@@ -213,7 +214,7 @@ function Performance() {
   );
 }
 
-function Portfolio() {
+function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[] }) {
   return (
     <section id="portfolio" className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
       <GlassCard className="overflow-hidden p-6">
@@ -240,6 +241,11 @@ function Portfolio() {
               </tr>
             </thead>
             <tbody>
+              {holdings.length === 0 && (
+                <tr>
+                   <td colSpan={6} className="py-8 text-center text-slate-500">No holdings found. Please login or import data.</td>
+                </tr>
+              )}
               {holdings.map((stock) => (
                 <tr key={stock.symbol} className="rounded-lg bg-white/[0.035] text-sm text-slate-300 transition hover:bg-white/[0.07]">
                   <td className="rounded-l-lg px-3 py-4">
@@ -252,10 +258,10 @@ function Portfolio() {
                     </div>
                   </td>
                   <td className="px-3 py-4">{stock.qty}</td>
-                  <td className="px-3 py-4">₹{stock.avg}</td>
-                  <td className="px-3 py-4">₹{stock.price}</td>
-                  <td className={`px-3 py-4 font-semibold ${stock.change >= 0 ? "text-profit" : "text-loss"}`}>{stock.change}%</td>
-                  <td className={`rounded-r-lg px-3 py-4 font-semibold ${stock.pnl.startsWith("-") ? "text-loss" : "text-profit"}`}>₹{stock.pnl}</td>
+                  <td className="px-3 py-4">₹{stock.avgCost.toLocaleString("en-IN")}</td>
+                  <td className="px-3 py-4">₹{stock.currentPrice?.toLocaleString("en-IN") || stock.avgCost.toLocaleString("en-IN")}</td>
+                  <td className={`px-3 py-4 font-semibold ${parseFloat(stock.changePercent) >= 0 ? "text-profit" : "text-loss"}`}>{stock.changePercent}%</td>
+                  <td className={`rounded-r-lg px-3 py-4 font-semibold ${String(stock.pnl).startsWith("-") ? "text-loss" : "text-profit"}`}>₹{Number(stock.pnl).toLocaleString("en-IN")}</td>
                 </tr>
               ))}
             </tbody>
@@ -264,21 +270,23 @@ function Portfolio() {
       </GlassCard>
 
       <GlassCard className="p-6">
-        <SectionHeader eyebrow="Allocation" title="Sector concentration" />
+        <SectionHeader eyebrow="Allocation" title="Stock concentration" />
         <AllocationChart />
         <div className="space-y-3">
-          {allocationData.map((item) => (
+          {allocation.map((item) => (
             <div key={item.name}>
               <div className="mb-1 flex justify-between text-sm">
                 <span className="text-slate-300">{item.name}</span>
                 <span className="text-slate-500">{item.value}%</span>
               </div>
               <div className="h-2 rounded-full bg-white/10">
-                <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: item.color }} />
+                <div className="h-full rounded-full bg-ai" style={{ width: `${item.value}%` }} />
               </div>
             </div>
           ))}
-          <div className="rounded-lg border border-warn/20 bg-warn/10 p-3 text-sm text-warn">Diversification: concentrated in IT, otherwise balanced.</div>
+          <div className="rounded-lg border border-warn/20 bg-warn/10 p-3 text-sm text-warn">
+            {allocation.length > 0 ? "Allocation grouped by symbols from your latest import." : "No data to analyze."}
+          </div>
         </div>
       </GlassCard>
     </section>
@@ -467,15 +475,17 @@ function NotificationDrawer({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
-function GeminiAdvisor() {
+function GeminiAdvisor({ holdings }: { holdings: any[] }) {
   const [insights, setInsights] = useState<string[]>(["Analyzing portfolio with Gemini-ready workflow..."]);
   const [source, setSource] = useState("mock");
 
   useEffect(() => {
+    if (!holdings || holdings.length === 0) return;
+    
     fetch("/api/ai-insights", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selectedStock: "ADANIPOWER", holdings, riskScore: 62, alerts })
+      body: JSON.stringify({ selectedStock: holdings[0]?.symbol || "ADANIPOWER", holdings, riskScore: 62, alerts })
     })
       .then((response) => response.json())
       .then((data) => {
@@ -674,6 +684,23 @@ function SkeletonStrip() {
 export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [holdings, setHoldings] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [allocation, setAllocation] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fintrackApi.getHoldings(),
+      fintrackApi.getSummary(),
+      fintrackApi.getAllocation()
+    ]).then(([hData, sData, aData]) => {
+      setHoldings(hData || []);
+      setSummary(sData);
+      setAllocation(aData || []);
+    }).catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <>
@@ -682,11 +709,11 @@ export default function Home() {
       <main className="flex w-full gap-0 py-0 lg:gap-5 mt-4">
         <Sidebar />
         <div className="min-w-0 flex-1 space-y-4 p-0 sm:space-y-5">
-          <Hero />
-          <Stats />
-          <GeminiAdvisor />
+          <Hero summary={summary} />
+          <Stats summary={summary} />
+          <GeminiAdvisor holdings={holdings} />
           <Performance />
-          <Portfolio />
+          <Portfolio holdings={holdings} allocation={allocation} />
           <AiInsights />
           <StockDetail />
           <StockMobileExperience />

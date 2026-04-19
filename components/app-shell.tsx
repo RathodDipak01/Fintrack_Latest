@@ -10,6 +10,7 @@ import { alerts } from "@/lib/portfolio-data";
 import { GlassCard, Pill } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketTicker } from "@/components/market-ticker";
+import { fintrackApi, setAuthToken } from "@/lib/api";
 
 const nav = [
   { label: "Dashboard", href: "/" },
@@ -23,6 +24,19 @@ const nav = [
 ];
 
 function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [email, setEmail] = useState("deepak@fintrack.app");
+  const [password, setPassword] = useState("mockpass");
+
+  const handleLogin = async () => {
+    try {
+      const res = await fintrackApi.login({ email, password });
+      setAuthToken(res.token);
+      window.location.reload();
+    } catch (e) {
+      alert("Login failed. Check server connection or credentials.");
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -30,7 +44,7 @@ function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="glass w-full max-w-md rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-ai">Secure access</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-ai">Live access</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Login to Fintrack</h2>
           </div>
           <button onClick={onClose} className="rounded-md border border-white/10 px-3 py-2 text-sm text-slate-300">Close</button>
@@ -38,14 +52,14 @@ function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         <div className="mt-6 space-y-4">
           <label className="block">
             <span className="text-sm text-slate-400">Email</span>
-            <input className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-ai" defaultValue="deepak@fintrack.app" />
+            <input className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-ai" value={email} onChange={e => setEmail(e.target.value)} />
           </label>
           <label className="block">
             <span className="text-sm text-slate-400">Password</span>
-            <input className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-ai" type="password" defaultValue="mockpass" />
+            <input className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-ai" type="password" value={password} onChange={e => setPassword(e.target.value)} />
           </label>
-          <button onClick={onClose} className="w-full rounded-md bg-ai px-4 py-3 text-sm font-semibold text-white shadow-glow">Login with mock account</button>
-          <p className="text-center text-sm text-slate-500">Signup, logout and session state are mocked for the prototype.</p>
+          <button onClick={handleLogin} className="w-full rounded-md bg-ai px-4 py-3 text-sm font-semibold text-white shadow-glow">Login and Sync Portfolio</button>
+          <p className="text-center text-sm text-slate-500">Hitting real database through /api/auth/login</p>
         </div>
       </motion.div>
     </div>

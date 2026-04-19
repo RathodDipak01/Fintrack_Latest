@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, FileSpreadsheet, Link2, Upload } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader } from "@/components/ui";
 import { BROKERS, SAMPLE_CSV, parseHoldingsCsv, type BrokerId, type ParsedHolding } from "@/lib/portfolio-import";
+import { fintrackApi } from "@/lib/api";
 
 export default function ImportPortfolioPage() {
+  const router = useRouter();
   const [csvText, setCsvText] = useState("");
   const [preview, setPreview] = useState<ParsedHolding[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
@@ -42,20 +45,47 @@ export default function ImportPortfolioPage() {
   };
 
   const submitCsv = async () => {
-    if (!csvText.trim()) return;
+    if (preview.length === 0) return;
     setLoading(true);
     setServerMsg(null);
     try {
+      // 1. Get summary/normalization from Next.js local API (optional but keeps summary logic separate)
       const res = await fetch("/api/portfolio-import/csv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csvText })
       });
       const data = await res.json();
-      setServerMsg(data.message ?? (data.success ? "OK" : "Failed"));
+      
+      if (!data.success) {
+        setServerMsg(data.message || "Normalization failed");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Persist to Express Backend
+      try {
+        await fintrackApi.bulkAddHoldings(data.holdings);
+      } catch (e: any) {
+        if (e.message.includes("Authentication") || e.message.includes("401")) {
+          setServerMsg("Authentication required. Please login first to save your portfolio.");
+        } else {
+          setServerMsg("Import failed: " + e.message);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      setServerMsg("Portfolio imported successfully! Redirecting...");
       if (data.summary) setServerSummary(data.summary);
-    } catch {
-      setServerMsg("Request failed. Try again.");
+      
+      // 3. Redirect to portfolio page after a short delay
+      setTimeout(() => {
+        router.push("/portfolio");
+      }, 1500);
+
+    } catch (e: any) {
+      setServerMsg(e.message || "Import failed. Try again.");
     } finally {
       setLoading(false);
     }
@@ -150,7 +180,7 @@ export default function ImportPortfolioPage() {
           }
         />
         <p className="mb-4 max-w-3xl text-sm text-slate-400">
-          Use columns such as <span className="text-slate-300">Symbol</span>,{" "}
+          Use columns such as <span className="text-slate-300">Instrument</span>, <span className="text-slate-300">Product</span>,{" "}
           <span className="text-slate-300">Quantity</span>, <span className="text-slate-300">Average Price</span>, optional{" "}
           <span className="text-slate-300">LTP</span> and <span className="text-slate-300">Name</span>. Or omit headers and
           provide three columns: symbol, qty, average cost.
@@ -215,6 +245,7 @@ export default function ImportPortfolioPage() {
                 <thead className="text-xs uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="px-2 py-2">Symbol</th>
+                    <th className="px-2 py-2">Type</th>
                     <th className="px-2 py-2">Qty</th>
                     <th className="px-2 py-2">Avg</th>
                     <th className="px-2 py-2">LTP</th>
@@ -225,6 +256,7 @@ export default function ImportPortfolioPage() {
                   {preview.map((h, i) => (
                     <tr key={`${h.symbol}-${i}`} className="rounded-md bg-white/[0.035] text-slate-300">
                       <td className="px-2 py-2 font-semibold text-white">{h.symbol}</td>
+                      <td className="px-2 py-2 text-xs">{h.productType ?? "—"}</td>
                       <td className="px-2 py-2">{h.qty}</td>
                       <td className="px-2 py-2">₹{h.avgCost.toLocaleString("en-IN")}</td>
                       <td className="px-2 py-2">{h.currentPrice != null ? `₹${h.currentPrice.toLocaleString("en-IN")}` : "—"}</td>

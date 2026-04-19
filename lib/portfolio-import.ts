@@ -40,6 +40,7 @@ export type ParsedHolding = {
   name?: string;
   qty: number;
   avgCost: number;
+  productType?: string;
   currentPrice?: number;
 };
 
@@ -66,7 +67,7 @@ function splitCsvLine(line: string): string[] {
 
 function looksLikeHeader(cells: string[]): boolean {
   const joined = cells.join(" ").toLowerCase();
-  return /symbol|ticker|qty|quantity|avg|average|cost|ltp|name|company/.test(joined);
+  return /symbol|instrument|ticker|product|qty|quantity|avg|average|cost|ltp|name|company/.test(joined);
 }
 
 /**
@@ -94,7 +95,8 @@ export function parseHoldingsCsv(raw: string): { holdings: ParsedHolding[]; erro
     return headerRow.findIndex(pred);
   };
 
-  let colSymbol = idx((h) => h.includes("symbol") || h.includes("ticker") || h.includes("scrip"));
+  let colSymbol = idx((h) => h.includes("symbol") || h.includes("instrument") || h.includes("ticker") || h.includes("scrip"));
+  let colProduct = idx((h) => h.includes("product") || h.includes("type"));
   let colQty = idx((h) => h.includes("qty") || h.includes("quantity") || h.includes("units"));
   let colAvg = idx((h) =>
     /avg|average\s*cost|buy\s*price|purchase|cost\s*price|avg\./i.test(h)
@@ -113,7 +115,7 @@ export function parseHoldingsCsv(raw: string): { holdings: ParsedHolding[]; erro
   }
 
   if (colSymbol < 0) {
-    errors.push("Could not detect a Symbol column. Use a header row with Symbol (or Ticker).");
+    errors.push("Could not detect a Symbol/Instrument column. Use a header row.");
     return { holdings: [], errors };
   }
 
@@ -126,17 +128,18 @@ export function parseHoldingsCsv(raw: string): { holdings: ParsedHolding[]; erro
     }
     const sym = (cells[colSymbol] ?? "").toUpperCase().replace(/\s+/g, "");
     if (!sym || !/^[A-Z0-9.&-]+$/.test(sym)) {
-      errors.push(`Row ${i + 1 + (hasHeader ? 1 : 0)}: invalid symbol "${cells[colSymbol]}"`);
+      errors.push(`Row ${i + 1 + (hasHeader ? 1 : 0)}: invalid symbol/instrument "${cells[colSymbol]}"`);
       return;
     }
 
+    const productType = colProduct >= 0 ? cells[colProduct] : undefined;
     const qtyRaw = colQty >= 0 ? cells[colQty] : cells[1];
     const avgRaw = colAvg >= 0 ? cells[colAvg] : cells[2];
 
     const qty = Number(String(qtyRaw).replace(/,/g, ""));
     const avgCost = Number(String(avgRaw).replace(/[₹,]/g, ""));
 
-    if (!Number.isFinite(qty) || qty <= 0) {
+    if (!Number.isFinite(qty)) {
       errors.push(`Row ${i + 1 + (hasHeader ? 1 : 0)}: invalid quantity`);
       return;
     }
@@ -161,6 +164,7 @@ export function parseHoldingsCsv(raw: string): { holdings: ParsedHolding[]; erro
       name,
       qty,
       avgCost,
+      productType,
       currentPrice: Number.isFinite(currentPrice) ? currentPrice : undefined
     });
   });
@@ -172,8 +176,8 @@ export function parseHoldingsCsv(raw: string): { holdings: ParsedHolding[]; erro
   return { holdings, errors };
 }
 
-export const SAMPLE_CSV = `Symbol,Quantity,Average Price,LTP,Name
-TCS,10,3450,3684,Tata Consultancy
-INFY,5,1380,1368,Infosys
-HDFCBANK,8,1480,1526,HDFC Bank
+export const SAMPLE_CSV = `Product,Instrument,Qty.,Avg.,LTP,P&L,Chg.
+CNC,ADANIENT,2,2040.85,2043.8,5.9,0.14
+CNC,CDSL,3,1284,1287.4,10.2,0.26
+MIS,EIEL,0,0,171.08,54.0,0.0
 `;

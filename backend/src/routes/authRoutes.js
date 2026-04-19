@@ -1,6 +1,7 @@
 import express from "express";
 import { z } from "zod";
-import { users } from "../data/mockData.js";
+import bcrypt from "bcrypt";
+import { prisma } from "../db.js";
 import { createSession, destroySession, requireAuth } from "../middleware/auth.js";
 import { error, ok } from "../utils/apiResponse.js";
 
@@ -11,35 +12,49 @@ const credentialsSchema = z.object({
   password: z.string().min(4)
 });
 
-authRouter.post("/signup", (req, res) => {
-  const parsed = credentialsSchema.extend({ name: z.string().min(2) }).safeParse(req.body);
-  if (!parsed.success) return error(res, 400, "Invalid signup data", parsed.error.flatten());
+authRouter.post("/signup", async (req, res) => {
+  try {
+    const parsed = credentialsSchema.safeParse(req.body);
+    if (!parsed.success) return error(res, 400, "Invalid signup data", parsed.error.flatten());
 
-  const existingUser = users.find((user) => user.email === parsed.data.email);
-  if (existingUser) return error(res, 409, "User already exists");
+    const existingUser = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (existingUser) return error(res, 409, "User already exists");
 
-  const user = {
-    id: `user_${users.length + 1}`,
-    name: parsed.data.name,
-    email: parsed.data.email,
-    password: parsed.data.password,
-    riskProfile: "Moderate"
-  };
-  users.push(user);
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(parsed.data.password, salt);
 
-  const token = createSession(user.id);
-  return ok(res, { token, user: sanitizeUser(user) }, "Signup successful");
+    const user = await prisma.user.create({
+      data: {
+        email: parsed.data.email,
+        passwordHash
+      }
+    });
+
+    const token = createSession(user.id);
+    return ok(res, { token, user: sanitizeUser(user) }, "Signup successful");
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Internal server error");
+  }
 });
 
-authRouter.post("/login", (req, res) => {
-  const parsed = credentialsSchema.safeParse(req.body);
-  if (!parsed.success) return error(res, 400, "Invalid login data", parsed.error.flatten());
+authRouter.post("/login", async (req, res) => {
+  try {
+    const parsed = credentialsSchema.safeParse(req.body);
+    if (!parsed.success) return error(res, 400, "Invalid login data", parsed.error.flatten());
 
-  const user = users.find((item) => item.email === parsed.data.email && item.password === parsed.data.password);
-  if (!user) return error(res, 401, "Invalid email or password");
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (!user) return error(res, 401, "Invalid email or password");
 
-  const token = createSession(user.id);
-  return ok(res, { token, user: sanitizeUser(user) }, "Login successful");
+    const isMatch = await bcrypt.compare(parsed.data.password, user.passwordHash);
+    if (!isMatch) return error(res, 401, "Invalid email or password");
+
+    const token = createSession(user.id);
+    return ok(res, { token, user: sanitizeUser(user) }, "Login successful");
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Internal server error");
+  }
 });
 
 authRouter.post("/logout", requireAuth, (req, res) => {
@@ -47,13 +62,18 @@ authRouter.post("/logout", requireAuth, (req, res) => {
   return ok(res, null, "Logged out");
 });
 
-authRouter.get("/me", requireAuth, (req, res) => {
-  const user = users.find((item) => item.id === req.userId);
-  if (!user) return error(res, 404, "User not found");
-  return ok(res, sanitizeUser(user));
+authRouter.get("/me", requireAuth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user) return error(res, 404, "User not found");
+    return ok(res, sanitizeUser(user));
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Internal server error");
+  }
 });
 
 function sanitizeUser(user) {
-  const { password, ...safeUser } = user;
+  const { passwordHash, ...safeUser } = user;
   return safeUser;
 }
