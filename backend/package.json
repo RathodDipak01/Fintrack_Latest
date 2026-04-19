@@ -8,12 +8,28 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
+    "pg": "^8.20.0",
+    "smartapi-javascript": "^1.0.27",
     "zod": "^3.24.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/jsonwebtoken": "^9.0.8",
+    "@types/pg": "^8.20.0",
+    "prisma": "^7.7.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
 }
