@@ -31,6 +31,7 @@ model PortfolioHolding {
   avgCost      Float
   productType  String?
   currentPrice Float?
+  sector       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

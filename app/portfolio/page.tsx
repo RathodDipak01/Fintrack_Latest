@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, Plus, Upload, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ChevronDown, Plus, Upload, ArrowUp, ArrowDown, ArrowUpDown, Eye, EyeOff } from "lucide-react";
 import { AllocationChart } from "@/components/charts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader, StatCard } from "@/components/ui";
@@ -19,6 +19,7 @@ export default function PortfolioPage() {
   const [summary, setSummary] = useState<any>(null);
   const [allocation, setAllocation] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -92,7 +93,12 @@ export default function PortfolioPage() {
     <AppShell>
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ai">Portfolio Management</p>
-        <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl">Holdings, allocation and P&L</h1>
+        <div className="flex items-center gap-3 mt-2">
+          <h1 className="text-3xl font-bold text-white md:text-5xl">Holdings, allocation and P&L</h1>
+          <button onClick={() => setIsPrivate(!isPrivate)} className="text-slate-500 hover:text-ai transition mt-2">
+            {isPrivate ? <EyeOff size={24} /> : <Eye size={24} />}
+          </button>
+        </div>
         <p className="mt-4 max-w-3xl text-slate-400">
           Track holdings with mock data for portfolio analysis, alerts and AI suggestions. This is a decision-support app only.
           Connect <Link href="/import" className="text-ai underline-offset-2 hover:underline">Angel One, Zerodha, Groww, Upstox</Link>{" "}
@@ -108,9 +114,9 @@ export default function PortfolioPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total investment" value={`₹${(summary?.totalInvestment || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" />
-        <StatCard label="Current value" value={`₹${(summary?.currentValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="profit" />
-        <StatCard label="Unrealized P&L" value={`₹${(summary?.totalReturns || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="ai" />
+        <StatCard label="Total investment" value={`₹${(summary?.totalInvestment || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" isPrivate={isPrivate} onTogglePrivacy={() => setIsPrivate(!isPrivate)} showPrivacyToggle />
+        <StatCard label="Current value" value={`₹${(summary?.currentValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="profit" isPrivate={isPrivate} onTogglePrivacy={() => setIsPrivate(!isPrivate)} showPrivacyToggle />
+        <StatCard label="Unrealized P&L" value={`₹${(summary?.totalReturns || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} change="+0%" tone="ai" isPrivate={isPrivate} onTogglePrivacy={() => setIsPrivate(!isPrivate)} showPrivacyToggle />
         <StatCard label="Holdings" value={String(liveHoldings.length)} change={isLoading ? "Loading..." : "Live"} tone="warn" />
       </section>
 
@@ -164,15 +170,17 @@ export default function PortfolioPage() {
                       </div>
                     </td>
                     <td className="px-3 py-4">{stock.qty}</td>
-                    <td className="px-3 py-4">₹{stock.avg}</td>
-                    <td className="px-3 py-4">₹{stock.price}</td>
+                    <td className="px-3 py-4">{isPrivate ? "••••" : `₹${stock.avg}`}</td>
+                    <td className="px-3 py-4">{isPrivate ? "••••" : `₹${stock.price}`}</td>
                     <td className="px-3 py-4 text-xs font-semibold">
                       <span className={`rounded px-2 py-1 ${stock.productType === 'MIS' ? 'bg-orange-500/10 text-orange-400' : 'bg-green-500/10 text-green-400'}`}>
                         {stock.productType}
                       </span>
                     </td>
                     <td className={`px-3 py-4 font-semibold ${stock.change >= 0 ? "text-profit" : "text-loss"}`}>{stock.change}%</td>
-                    <td className={`px-3 py-4 font-semibold ${stock.pnl.startsWith("-") ? "text-loss" : "text-profit"}`}>₹{stock.pnl}</td>
+                    <td className={`px-3 py-4 font-semibold ${stock.pnl.startsWith("-") ? "text-loss" : "text-profit"}`}>
+                      {isPrivate ? "••••" : `₹${stock.pnl}`}
+                    </td>
                     <td className="rounded-r-lg px-3 py-4">
                       <div className="flex gap-2">
                         <button className="rounded-md border border-white/10 px-2 py-1 text-xs">Edit</button>
@@ -187,7 +195,7 @@ export default function PortfolioPage() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Allocation" title="Stock breakdown" action={<Pill tone="warn">{summary?.diversification || "Analyzing"}</Pill>} />
+          <SectionHeader eyebrow="Allocation" title="Sector breakdown" action={<Pill tone="warn">{summary?.diversification || "Analyzing"}</Pill>} />
           <AllocationChart />
           <div className="space-y-3">
             {allocation.map((item) => (

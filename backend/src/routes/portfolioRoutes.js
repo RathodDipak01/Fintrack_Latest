@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { created, error, ok } from "../utils/apiResponse.js";
+import { getSector } from "../utils/sectorMap.js";
 // Mock data summary structures untouched for phase 1 transition
 import { allocation, portfolioSummary } from "../data/mockData.js";
 
@@ -13,10 +14,10 @@ portfolioRouter.use(requireAuth);
 const holdingSchema = z.object({
   symbol: z.string().min(1).transform((value) => value.toUpperCase()),
   name: z.string().optional(),
-  qty: z.number().nonnegative(),
-  avgCost: z.number().nonnegative(),
+  qty: z.number().finite().nonnegative(),
+  avgCost: z.number().finite().nonnegative(),
   productType: z.string().optional(),
-  currentPrice: z.number().nonnegative().optional()
+  currentPrice: z.number().finite().nonnegative().optional()
 });
 
 const bulkHoldingsSchema = z.array(holdingSchema);
@@ -51,10 +52,11 @@ portfolioRouter.get("/allocation", async (req, res) => {
     
     if (totalValue === 0) return ok(res, []);
 
-    // Group by symbol for now (since Sector is missing in CSV)
+    // Group by sector for industry analysis
     const grouped = holdings.reduce((acc, h) => {
       const val = h.qty * (h.currentPrice || h.avgCost);
-      acc[h.symbol] = (acc[h.symbol] || 0) + val;
+      const sector = h.sector || "Other";
+      acc[sector] = (acc[sector] || 0) + val;
       return acc;
     }, {});
 
@@ -82,6 +84,7 @@ portfolioRouter.post("/bulk", async (req, res) => {
         data: parsed.data.map(h => ({
           ...h,
           name: h.name || h.symbol,
+          sector: getSector(h.symbol),
           userId: req.userId
         }))
       })
@@ -89,8 +92,8 @@ portfolioRouter.post("/bulk", async (req, res) => {
 
     return ok(res, { count: parsed.data.length }, "Portfolio bulk updated successfully");
   } catch (err) {
-    console.error(err);
-    return error(res, 500, "Error performing bulk import");
+    console.error("Bulk Import Error:", err);
+    return error(res, 500, `Error performing bulk import: ${err.message}`);
   }
 });
 

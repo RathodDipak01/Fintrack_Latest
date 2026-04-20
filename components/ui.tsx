@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Eye, EyeOff } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function GlassCard({
@@ -30,12 +30,18 @@ export function StatCard({
   label,
   value,
   change,
-  tone = "profit"
+  tone = "profit",
+  showPrivacyToggle = false,
+  isPrivate = false,
+  onTogglePrivacy
 }: {
   label: string;
   value: string;
   change: string;
   tone?: "profit" | "loss" | "ai" | "warn";
+  showPrivacyToggle?: boolean;
+  isPrivate?: boolean;
+  onTogglePrivacy?: () => void;
 }) {
   const colors = {
     profit: "text-profit",
@@ -47,9 +53,18 @@ export function StatCard({
 
   return (
     <GlassCard className="p-5">
-      <p className="text-sm text-slate-400">{label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-400">{label}</p>
+        {showPrivacyToggle && (
+          <button onClick={onTogglePrivacy} className="text-slate-500 hover:text-ai transition">
+            {isPrivate ? <EyeOff size={14} /> : <Eye size={14} /> }
+          </button>
+        )}
+      </div>
       <div className="mt-4 flex items-end justify-between gap-4">
-        <strong className="text-2xl font-semibold tracking-normal text-white">{value}</strong>
+        <strong className="text-2xl font-semibold tracking-normal text-white">
+          {isPrivate ? "••••••••" : value}
+        </strong>
         <span className={`flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-sm ${colors[tone]}`}>
           <Icon size={15} />
           {change}

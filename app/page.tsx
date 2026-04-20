@@ -2,11 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Bell,
   BrainCircuit,
   ChevronDown,
+  Eye,
+  EyeOff,
   Gauge,
   LineChart,
   LogIn,
@@ -125,7 +130,7 @@ function Sidebar() {
   );
 }
 
-function Hero({ summary }: { summary: any }) {
+function Hero({ summary, isPrivate, onTogglePrivacy }: { summary: any; isPrivate: boolean; onTogglePrivacy: () => void }) {
   const netWorth = summary?.currentValue || 0;
   return (
     <section id="dashboard" className="grid gap-5 xl:grid-cols-[1.35fr_0.85fr]">
@@ -134,8 +139,15 @@ function Hero({ summary }: { summary: any }) {
         <div className="relative grid gap-6 md:grid-cols-[1fr_260px] md:items-end">
           <div>
             <Pill tone="ai">AI risk engine active</Pill>
-            <p className="mt-6 text-sm text-slate-400">Net worth</p>
-            <h1 className="mt-2 text-4xl font-bold tracking-normal text-white md:text-6xl">₹{netWorth.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h1>
+            <div className="mt-6 flex items-center gap-2">
+              <p className="text-sm text-slate-400">Net worth</p>
+              <button onClick={onTogglePrivacy} className="text-slate-500 hover:text-ai transition">
+                {isPrivate ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            <h1 className="mt-2 text-4xl font-bold tracking-normal text-white md:text-6xl">
+              {isPrivate ? "••••••••" : `₹${netWorth.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </h1>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <span className="rounded-md bg-profit/10 px-3 py-2 text-sm font-semibold text-profit">+₹1,24,800 today</span>
               <span className="rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300">+2.63% vs +0.84% NIFTY50</span>
@@ -181,13 +193,13 @@ function Hero({ summary }: { summary: any }) {
   );
 }
 
-function Stats({ summary }: { summary: any }) {
+function Stats({ summary, isPrivate, onTogglePrivacy }: { summary: any; isPrivate: boolean; onTogglePrivacy: () => void }) {
   const format = (val: number) => `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Total investment" value={format(summary?.totalInvestment || 0)} change="+0%" />
-      <StatCard label="Current value" value={format(summary?.currentValue || 0)} change="+0%" tone="profit" />
-      <StatCard label="Total returns" value={format(summary?.totalReturns || 0)} change="+0%" tone="ai" />
+      <StatCard label="Total investment" value={format(summary?.totalInvestment || 0)} change="+0%" isPrivate={isPrivate} onTogglePrivacy={onTogglePrivacy} showPrivacyToggle />
+      <StatCard label="Current value" value={format(summary?.currentValue || 0)} change="+0%" tone="profit" isPrivate={isPrivate} onTogglePrivacy={onTogglePrivacy} showPrivacyToggle />
+      <StatCard label="Total returns" value={format(summary?.totalReturns || 0)} change="+0%" tone="ai" isPrivate={isPrivate} onTogglePrivacy={onTogglePrivacy} showPrivacyToggle />
       <StatCard label="Risk score" value={`${summary?.riskScore || 0}/100`} change={summary?.diversification || "Analyzing"} tone="warn" />
     </section>
   );
@@ -214,7 +226,49 @@ function Performance() {
   );
 }
 
-function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[] }) {
+function Portfolio({ holdings, allocation, isPrivate }: { holdings: any[]; allocation: any[]; isPrivate: boolean }) {
+  const [sortField, setSortField] = useState<string>("symbol");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+
+      // Handle numeric conversion for relevant fields
+      if (["qty", "avgCost", "currentPrice", "changePercent", "pnl"].includes(sortField)) {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+      }
+
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [holdings, sortField, sortDirection]);
+
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderHeader = (label: string, field: string) => (
+    <th className="group cursor-pointer px-3 py-2 transition hover:bg-white/5" onClick={() => handleSort(field)}>
+      <div className="flex items-center gap-1">
+        {label}
+        {sortField === field ? (
+          sortDirection === "asc" ? <ArrowUp size={12} className="text-ai" /> : <ArrowDown size={12} className="text-ai" />
+        ) : (
+          <ArrowUpDown size={12} className="opacity-0 transition group-hover:opacity-30" />
+        )}
+      </div>
+    </th>
+  );
+
   return (
     <section id="portfolio" className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
       <GlassCard className="overflow-hidden p-6">
@@ -232,12 +286,12 @@ function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[
           <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left">
             <thead className="text-xs uppercase tracking-[0.16em] text-slate-500">
               <tr>
-                <th className="px-3 py-2">Stock</th>
-                <th className="px-3 py-2">Qty</th>
-                <th className="px-3 py-2">Avg cost</th>
-                <th className="px-3 py-2">Current</th>
-                <th className="px-3 py-2">% Change</th>
-                <th className="px-3 py-2">Total P&L</th>
+                {renderHeader("Stock", "symbol")}
+                {renderHeader("Qty", "qty")}
+                {renderHeader("Avg cost", "avgCost")}
+                {renderHeader("Current", "currentPrice")}
+                {renderHeader("% Change", "changePercent")}
+                {renderHeader("Total P&L", "pnl")}
               </tr>
             </thead>
             <tbody>
@@ -246,7 +300,7 @@ function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[
                    <td colSpan={6} className="py-8 text-center text-slate-500">No holdings found. Please login or import data.</td>
                 </tr>
               )}
-              {holdings.map((stock) => (
+              {sortedHoldings.map((stock) => (
                 <tr key={stock.symbol} className="rounded-lg bg-white/[0.035] text-sm text-slate-300 transition hover:bg-white/[0.07]">
                   <td className="rounded-l-lg px-3 py-4">
                     <div className="flex items-center gap-3">
@@ -258,10 +312,12 @@ function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[
                     </div>
                   </td>
                   <td className="px-3 py-4">{stock.qty}</td>
-                  <td className="px-3 py-4">₹{stock.avgCost.toLocaleString("en-IN")}</td>
-                  <td className="px-3 py-4">₹{stock.currentPrice?.toLocaleString("en-IN") || stock.avgCost.toLocaleString("en-IN")}</td>
+                  <td className="px-3 py-4">{isPrivate ? "••••" : `₹${stock.avgCost.toLocaleString("en-IN")}`}</td>
+                  <td className="px-3 py-4">{isPrivate ? "••••" : `₹${stock.currentPrice?.toLocaleString("en-IN") || stock.avgCost.toLocaleString("en-IN")}`}</td>
                   <td className={`px-3 py-4 font-semibold ${parseFloat(stock.changePercent) >= 0 ? "text-profit" : "text-loss"}`}>{stock.changePercent}%</td>
-                  <td className={`rounded-r-lg px-3 py-4 font-semibold ${String(stock.pnl).startsWith("-") ? "text-loss" : "text-profit"}`}>₹{Number(stock.pnl).toLocaleString("en-IN")}</td>
+                  <td className={`rounded-r-lg px-3 py-4 font-semibold ${String(stock.pnl).startsWith("-") ? "text-loss" : "text-profit"}`}>
+                    {isPrivate ? "••••" : `₹${Number(stock.pnl).toLocaleString("en-IN")}`}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -270,7 +326,7 @@ function Portfolio({ holdings, allocation }: { holdings: any[]; allocation: any[
       </GlassCard>
 
       <GlassCard className="p-6">
-        <SectionHeader eyebrow="Allocation" title="Stock concentration" />
+        <SectionHeader eyebrow="Allocation" title="Sector distribution" />
         <AllocationChart />
         <div className="space-y-3">
           {allocation.map((item) => (
@@ -688,6 +744,7 @@ export default function Home() {
   const [summary, setSummary] = useState<any>(null);
   const [allocation, setAllocation] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -709,11 +766,11 @@ export default function Home() {
       <main className="flex w-full gap-0 py-0 lg:gap-5 mt-4">
         <Sidebar />
         <div className="min-w-0 flex-1 space-y-4 p-0 sm:space-y-5">
-          <Hero summary={summary} />
-          <Stats summary={summary} />
+          <Hero summary={summary} isPrivate={isPrivate} onTogglePrivacy={() => setIsPrivate(!isPrivate)} />
+          <Stats summary={summary} isPrivate={isPrivate} onTogglePrivacy={() => setIsPrivate(!isPrivate)} />
           <GeminiAdvisor holdings={holdings} />
           <Performance />
-          <Portfolio holdings={holdings} allocation={allocation} />
+          <Portfolio holdings={holdings} allocation={allocation} isPrivate={isPrivate} />
           <AiInsights />
           <StockDetail />
           <StockMobileExperience />
