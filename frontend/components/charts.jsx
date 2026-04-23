@@ -170,6 +170,47 @@ export function ForecastChart() {
   );
 }
 
+export function DynamicMLForecastChart({ data }) {
+  if (!data || data.length === 0) return null;
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} className="chart-grid">
+        <defs>
+          <linearGradient id="mlForecast" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.6} />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+        <XAxis
+          dataKey="day"
+          stroke="#94A3B8"
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11 }}
+        />
+        <YAxis
+          stroke="#94A3B8"
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11 }}
+          domain={["dataMin - 1000", "dataMax + 1000"]}
+        />
+        <Tooltip contentStyle={tooltipStyle} />
+        <Area
+          type="monotone"
+          dataKey="projectedValue"
+          stroke="#3B82F6"
+          strokeWidth={3}
+          fill="url(#mlForecast)"
+          name="AI Forecast Value (₹)"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+
 export function CandleProxyChart() {
   return (
     <ResponsiveContainer width="100%" height={260}>

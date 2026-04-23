@@ -12,7 +12,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { AllocationChart } from "@/components/charts";
+import { AllocationChart, DynamicMLForecastChart } from "@/components/charts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader, StatCard } from "@/components/ui";
 import { fintrackApi } from "@/lib/api";
@@ -23,6 +23,7 @@ export default function PortfolioPage() {
   const [liveHoldings, setLiveHoldings] = useState([]);
   const [summary, setSummary] = useState(null);
   const [allocation, setAllocation] = useState([]);
+  const [forecast, setForecast] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -31,8 +32,9 @@ export default function PortfolioPage() {
       fintrackApi.getHoldings(),
       fintrackApi.getSummary(),
       fintrackApi.getAllocation(),
+      fintrackApi.getForecast()
     ])
-      .then(([hData, sData, aData]) => {
+      .then(([hData, sData, aData, fData]) => {
         const mapped = (hData || []).map((h) => ({
           ...h,
           avg: h.avgCost,
@@ -44,6 +46,7 @@ export default function PortfolioPage() {
         setLiveHoldings(mapped);
         setSummary(sData);
         setAllocation(aData || []);
+        setForecast(fData?.data || fData || []);
       })
       .catch((err) => {
         console.error(err);
@@ -322,6 +325,29 @@ export default function PortfolioPage() {
               </div>
             ))}
           </div>
+        </GlassCard>
+      </section>
+
+      {/* ML Forecast Section */}
+      <section className="mt-5">
+        <GlassCard className="p-6">
+          <SectionHeader
+            eyebrow="Machine Learning"
+            title="30-Day Portfolio Forecast"
+            action={
+              <Pill tone="ai">TensorFlow.js Activated</Pill>
+            }
+          />
+          <p className="mb-4 text-sm text-slate-400">
+            Our predictive Neural Network analyzes historical trends and market volatility to estimate the future growth trajectory of your portfolio over the next 30 days.
+          </p>
+          {forecast.length > 0 ? (
+            <DynamicMLForecastChart data={forecast} />
+          ) : (
+            <div className="flex h-[260px] items-center justify-center text-slate-500">
+              {isLoading ? "Training ML model..." : "Forecast data unavailable"}
+            </div>
+          )}
         </GlassCard>
       </section>
     </AppShell>

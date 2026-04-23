@@ -92,4 +92,7 @@ export const fintrackApi = {
     fetchWithAuth("/watchlist", { method: "POST", body: JSON.stringify(data) }),
   removeFromWatchlist: (id) =>
     fetchWithAuth(`/watchlist/${id}`, { method: "DELETE" }),
+
+  // --- Machine Learning ---
+  getForecast: () => fetchWithAuth("/ml/forecast", { method: "GET" }),
 };
