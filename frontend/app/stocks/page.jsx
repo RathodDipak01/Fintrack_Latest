@@ -104,6 +104,11 @@ export default function StocksPage() {
                   </span>
                 )}
               </h2>
+              {quote?.volume && (
+                <p className="text-xs text-slate-500 mt-1 font-mono">
+                  Volume: <span className="text-slate-300">{quote.volume.toLocaleString('en-IN')}</span>
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               <button className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 hover:bg-white/10 hover:text-white transition-all shadow-sm">
@@ -139,20 +144,63 @@ export default function StocksPage() {
         </div>
       </GlassCard>
 
-      {/* Insights Section - Full Width */}
+      {/* Financial Performance Section */}
+      <GlassCard className="p-8 mb-6">
+        <SectionHeader eyebrow="Performance" title="Financial Performance" />
+        <p className="mt-2 text-slate-400 mb-8">Consolidated Revenue, Profit, and Net Worth trends (₹ in Crores).</p>
+        
+        <div className="grid gap-6 lg:grid-cols-3">
+          {(growwData?.financialStatementV2?.CONSOLIDATED || []).map((metric) => (
+            <div key={metric.title} className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 hover:bg-white/[0.04] transition-all">
+              <h4 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
+                {metric.title}
+                <span className="text-[10px] text-ai font-black uppercase tracking-widest bg-ai/10 px-2 py-1 rounded">Yearly</span>
+              </h4>
+              
+              <div className="flex items-end gap-2 h-32 mb-6">
+                {Object.entries(metric.yearly || {}).slice(-5).map(([year, value]) => {
+                  const values = Object.values(metric.yearly);
+                  const max = Math.max(...values);
+                  const height = (value / max) * 100;
+                  return (
+                    <div key={year} className="flex-1 flex flex-col items-center gap-2 group">
+                      <div className="w-full relative">
+                        <div 
+                          className={`w-full rounded-t-lg transition-all duration-700 ${metric.title === 'Profit' ? 'bg-profit' : metric.title === 'Revenue' ? 'bg-ai' : 'bg-white/40'} group-hover:brightness-125`}
+                          style={{ height: `${height}%` }}
+                        />
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-midnight border border-white/10 px-2 py-1 rounded text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                          ₹{value.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-500">{year}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="space-y-3 border-t border-white/5 pt-4">
+                {Object.entries(metric.yearly || {}).slice(-3).reverse().map(([year, value]) => (
+                  <div key={year} className="flex justify-between text-sm">
+                    <span className="text-slate-500 font-medium">{year}</span>
+                    <span className="text-white font-mono font-bold">₹{value.toLocaleString('en-IN')} Cr</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
+
+      {/* Insights Section */}
       <GlassCard className="p-8 mb-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <SectionHeader
               eyebrow="Intelligence"
-              title={`Insights on ${stockName}`}
+              title={`Key Ratios`}
             />
-            <p className="mt-2 text-slate-400">Critical parameters and efficiency analysis.</p>
-          </div>
-          <div className="hidden md:flex gap-4">
-             {["Overview", "Financials", "Peers"].map((t, i) => (
-               <span key={t} className={`text-xs font-bold uppercase tracking-widest ${i===0 ? 'text-ai' : 'text-slate-600'}`}>{t}</span>
-             ))}
+            <p className="mt-2 text-slate-400">Valuation and efficiency analysis.</p>
           </div>
         </div>
         
@@ -160,7 +208,6 @@ export default function StocksPage() {
           <div className="rounded-2xl border border-ai/20 bg-ai/5 p-6 hover:bg-ai/10 transition-all group">
             <div className="flex justify-between items-start">
               <Pill tone="profit">Valuation</Pill>
-              <div className="h-2 w-2 rounded-full bg-ai animate-pulse" />
             </div>
             <h4 className="mt-6 text-xl font-bold text-white group-hover:text-ai transition-colors">Pricing Metrics</h4>
             <div className="mt-4 space-y-3">

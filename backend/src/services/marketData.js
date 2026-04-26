@@ -140,7 +140,8 @@ export async function getStockQuote(symbol) {
       changeRaw: quoteResult.regularMarketChange,
       changePercent: quoteResult.regularMarketChangePercent,
       exchange: quoteResult.exchange,
-      currency: quoteResult.currency
+      currency: quoteResult.currency,
+      volume: quoteResult.regularMarketVolume
     };
   } catch (error) { 
     console.error(`Quote error for ${symbol}:`, error.message);
