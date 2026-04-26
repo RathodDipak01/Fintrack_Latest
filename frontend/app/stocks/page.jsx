@@ -38,7 +38,7 @@ export default function StocksPage() {
           fintrackApi.getShareholding(symbol).catch(() => null),
           fintrackApi.getGrowwData(symbol).catch(() => null)
         ]);
-        
+
         if (qData) setQuote(qData);
         if (sData) setShareholding(sData);
         if (gData) setGrowwData(gData);
@@ -96,7 +96,7 @@ export default function StocksPage() {
             <div>
               <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{quote?.exchange || "NSE"}: {symbol}</p>
               <h2 className="mt-1 text-3xl font-bold text-white flex items-center gap-3">
-                {stockPrice} 
+                {stockPrice}
                 {!loading && (
                   <span className={`text-lg font-semibold ${isUp ? "text-profit" : "text-loss"}`}>
                     {stockChangeRaw ? `${isUp ? "+" : ""}${stockChangeRaw} ` : ""}
@@ -119,7 +119,7 @@ export default function StocksPage() {
               </button>
             </div>
           </div>
-          
+
           <div className="h-[500px] w-full rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0a]">
             <CustomChart symbol={symbol} />
           </div>
@@ -147,45 +147,88 @@ export default function StocksPage() {
       {/* Financial Performance Section */}
       <GlassCard className="p-8 mb-6">
         <SectionHeader eyebrow="Performance" title="Financial Performance" />
-        <p className="mt-2 text-slate-400 mb-8">Consolidated Revenue, Profit, and Net Worth trends (₹ in Crores).</p>
-        
+        <p className="mt-2 text-slate-400 mb-8">
+          Consolidated Revenue, Profit, and Net Worth trends (₹ in Crores).
+        </p>
+
         <div className="grid gap-6 lg:grid-cols-3">
           {(growwData?.financialStatementV2?.CONSOLIDATED || []).map((metric) => (
-            <div key={metric.title} className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 hover:bg-white/[0.04] transition-all">
+            <div
+              key={metric.title}
+              className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 hover:bg-white/[0.04] transition-all"
+            >
               <h4 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
                 {metric.title}
-                <span className="text-[10px] text-ai font-black uppercase tracking-widest bg-ai/10 px-2 py-1 rounded">Yearly</span>
+                <span className="text-[10px] text-ai font-black uppercase tracking-widest bg-ai/10 px-2 py-1 rounded">
+                  Yearly
+                </span>
               </h4>
-              
-              <div className="flex items-end gap-2 h-32 mb-6">
-                {Object.entries(metric.yearly || {}).slice(-5).map(([year, value]) => {
-                  const values = Object.values(metric.yearly);
-                  const max = Math.max(...values);
-                  const height = (value / max) * 100;
-                  return (
-                    <div key={year} className="flex-1 flex flex-col items-center gap-2 group">
-                      <div className="w-full relative">
-                        <div 
-                          className={`w-full rounded-t-lg transition-all duration-700 ${metric.title === 'Profit' ? 'bg-profit' : metric.title === 'Revenue' ? 'bg-ai' : 'bg-white/40'} group-hover:brightness-125`}
-                          style={{ height: `${height}%` }}
-                        />
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-midnight border border-white/10 px-2 py-1 rounded text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
-                          ₹{value.toLocaleString('en-IN')}
+
+              {/* Chart */}
+              <div className="flex items-end gap-2 h-32 mb-6 px-2">
+                {(Object.entries(metric.yearly || {}).slice(-5) || []).map(
+                  ([year, rawValue]) => {
+                    const value = Number(rawValue);
+                    const values = Object.values(metric.yearly).map((v) =>
+                      Number(v)
+                    );
+                    const max = Math.max(...values) || 1;
+
+                    const height = Math.max((value / max) * 100, 5);
+
+                    const barColor =
+                      metric.title === "Profit"
+                        ? "#22C55E"
+                        : metric.title === "Revenue"
+                          ? "#3B82F6"
+                          : "#94a3b8";
+
+                    return (
+                      <div
+                        key={year}
+                        className="flex-1 flex flex-col items-center justify-end gap-2 group min-w-[30px] h-full"
+                      >
+                        {/* Bar container */}
+                        <div className="w-full relative h-full flex items-end overflow-hidden">
+                          {/* Bar */}
+                          <div
+                            className="w-full rounded-t-md transition-all duration-700 group-hover:brightness-125 shadow-[0_0_15px_rgba(0,0,0,0.2)]"
+                            style={{
+                              height: `${height}%`,
+                              backgroundColor: barColor,
+                              opacity: 0.8,
+                            }}
+                          />
+
+                          {/* Tooltip */}
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-midnight border border-white/10 px-2 py-1 rounded text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                            ₹{value.toLocaleString("en-IN")}
+                          </div>
                         </div>
+
+                        {/* Year */}
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {year}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-500">{year}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </div>
-              
+
+              {/* Bottom values */}
               <div className="space-y-3 border-t border-white/5 pt-4">
-                {Object.entries(metric.yearly || {}).slice(-3).reverse().map(([year, value]) => (
-                  <div key={year} className="flex justify-between text-sm">
-                    <span className="text-slate-500 font-medium">{year}</span>
-                    <span className="text-white font-mono font-bold">₹{value.toLocaleString('en-IN')} Cr</span>
-                  </div>
-                ))}
+                {Object.entries(metric.yearly || {})
+                  .slice(-3)
+                  .reverse()
+                  .map(([year, value]) => (
+                    <div key={year} className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">{year}</span>
+                      <span className="text-white font-mono font-bold">
+                        ₹{value.toLocaleString("en-IN")} Cr
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           ))}
@@ -203,7 +246,7 @@ export default function StocksPage() {
             <p className="mt-2 text-slate-400">Valuation and efficiency analysis.</p>
           </div>
         </div>
-        
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl border border-ai/20 bg-ai/5 p-6 hover:bg-ai/10 transition-all group">
             <div className="flex justify-between items-start">
