@@ -365,73 +365,129 @@ export default function StocksPage() {
 
       {/* Intelligence & Technicals Row */}
       <section className="grid gap-6 xl:grid-cols-3 mb-6 items-stretch">
-        {/* Left: Key Ratios (Merged with Technicals) */}
-        <div className="xl:col-span-2 grid gap-6 md:grid-cols-2 items-stretch">
-           <GlassCard className="p-6 h-full flex flex-col">
-             <SectionHeader eyebrow="Valuation" title="Pricing Intelligence" />
-             <div className="mt-6 space-y-4 flex-1">
-                {[
-                  { label: "P/E Ratio", value: growwData?.stats?.peRatio, industry: growwData?.stats?.industryPe },
-                  { label: "P/B Ratio", value: growwData?.stats?.pbRatio, industry: growwData?.stats?.sectorPb },
-                  { label: "EV/EBITDA", value: growwData?.stats?.evToEbitda, industry: "N/A" },
-                ].map((item) => (
-                  <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <span className="text-[10px] uppercase font-black text-slate-500">{item.label}</span>
-                        <div className="text-xl font-bold text-white mt-1">{item.value || "N/A"}</div>
-                      </div>
-                      {item.industry && item.industry !== "N/A" && (
-                        <div className="text-right">
-                          <span className="text-[10px] uppercase font-bold text-slate-600">Industry Avg</span>
-                          <div className="text-sm font-bold text-ai">{typeof item.industry === 'number' ? item.industry.toFixed(2) : item.industry}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-             </div>
-           </GlassCard>
-
-           <GlassCard className="p-6 h-full flex flex-col">
-             <SectionHeader eyebrow="Efficiency" title="Health Indicators" />
-             <div className="mt-6 grid grid-cols-2 gap-4 flex-1">
-                {[
-                  { label: "ROE", value: growwData?.stats?.roe ? `${Number(growwData.stats.roe).toFixed(2)}%` : null, tone: "profit" },
-                  { label: "ROCE", value: growwData?.fundamentals?.find(f => f.name.includes("ROCE"))?.value || (growwData?.stats?.sectorRoce ? `${Number(growwData.stats.sectorRoce).toFixed(2)}%` : null), tone: "ai" },
-                  { label: "Debt/Equity", value: typeof growwData?.stats?.debtToEquity === 'number' ? growwData.stats.debtToEquity.toFixed(2) : growwData?.stats?.debtToEquity, tone: "warn" },
-                  { label: "Current Ratio", value: typeof growwData?.stats?.currentRatio === 'number' ? growwData.stats.currentRatio.toFixed(2) : growwData?.stats?.currentRatio, tone: "ai" },
-                  { label: "EPS (TTM)", value: growwData?.stats?.epsTtm ? `₹${Number(growwData.stats.epsTtm).toFixed(2)}` : null, tone: "white" },
-                  { label: "Div Yield", value: growwData?.stats?.divYield ? `${Number(growwData.stats.divYield).toFixed(2)}%` : null, tone: "profit" },
-                ].map((item) => (
-                  <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all flex flex-col justify-center">
-                    <span className="text-[10px] uppercase font-black text-slate-600">{item.label}</span>
-                    <div className={`text-lg font-bold mt-1 ${item.tone === 'profit' ? 'text-profit' : item.tone === 'ai' ? 'text-ai' : item.tone === 'warn' ? 'text-warn' : 'text-white'}`}>
-                      {item.value || "N/A"}
-                    </div>
-                  </div>
-                ))}
-             </div>
-           </GlassCard>
-        </div>
-
-        {/* Right: Balance Sheet (Scrollable) */}
         <GlassCard className="p-6 h-full flex flex-col">
-          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
-          <div className="mt-6 space-y-2 overflow-y-auto thin-scrollbar pr-2" style={{ maxHeight: "400px" }}>
-            {growwData?.fundamentals ? (
-              growwData.fundamentals.map((metric) => (
-                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-xs rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
-                  <span className="text-slate-500 font-medium">{metric.name}</span>
-                  <span className="font-mono font-bold text-white text-right ml-4">{metric.value}</span>
+          <SectionHeader eyebrow="Performance" title="Market Range" />
+          <div className="mt-6 flex-1 space-y-6 flex flex-col justify-center">
+            {/* Today's Range */}
+            <div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2">
+                <span>Today's Low</span>
+                <span>Today's High</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold text-white mb-2">
+                <span>₹{quote?.dayLow?.toLocaleString('en-IN') || "N/A"}</span>
+                <span>₹{quote?.dayHigh?.toLocaleString('en-IN') || "N/A"}</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
+                <div 
+                  className="absolute h-full bg-ai shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000" 
+                  style={{ 
+                    left: `${((quote?.price - quote?.dayLow) / (quote?.dayHigh - quote?.dayLow)) * 100}%`,
+                    width: '4px',
+                    transform: 'translateX(-50%)'
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* 52W Range */}
+            <div>
+              <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2">
+                <span>52W Low</span>
+                <span>52W High</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold text-white mb-2">
+                <span>₹{quote?.fiftyTwoWeekLow?.toLocaleString('en-IN') || "N/A"}</span>
+                <span>₹{quote?.fiftyTwoWeekHigh?.toLocaleString('en-IN') || "N/A"}</span>
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
+                <div 
+                  className="absolute h-full bg-profit shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000" 
+                  style={{ 
+                    left: `${((quote?.price - quote?.fiftyTwoWeekLow) / (quote?.fiftyTwoWeekHigh - quote?.fiftyTwoWeekLow)) * 100}%`,
+                    width: '4px',
+                    transform: 'translateX(-50%)'
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Open/Close */}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Open</span>
+                <div className="text-sm font-bold text-white mt-0.5">₹{quote?.open?.toLocaleString('en-IN') || "N/A"}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Prev Close</span>
+                <div className="text-sm font-bold text-white mt-0.5">₹{quote?.prevClose?.toLocaleString('en-IN') || "N/A"}</div>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6 h-full flex flex-col">
+          <SectionHeader eyebrow="Valuation" title="Pricing Intelligence" />
+          <div className="mt-6 space-y-4 flex-1">
+            {[
+              { label: "P/E Ratio", value: growwData?.stats?.peRatio, industry: growwData?.stats?.industryPe },
+              { label: "P/B Ratio", value: growwData?.stats?.pbRatio, industry: growwData?.stats?.sectorPb },
+              { label: "EV/EBITDA", value: growwData?.stats?.evToEbitda, industry: "N/A" },
+            ].map((item) => (
+              <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-slate-500">{item.label}</span>
+                    <div className="text-xl font-bold text-white mt-1">{item.value || "N/A"}</div>
+                  </div>
+                  {item.industry && item.industry !== "N/A" && (
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-600">Industry Avg</span>
+                      <div className="text-sm font-bold text-ai">{typeof item.industry === 'number' ? item.industry.toFixed(2) : item.industry}</div>
+                    </div>
+                  )}
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-slate-500">Loading fundamentals...</div>
-            )}
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard className="p-6 h-full flex flex-col">
+          <SectionHeader eyebrow="Efficiency" title="Health Indicators" />
+          <div className="mt-6 grid grid-cols-2 gap-4 flex-1">
+            {[
+              { label: "ROE", value: growwData?.stats?.roe ? `${Number(growwData.stats.roe).toFixed(2)}%` : null, tone: "profit" },
+              { label: "ROCE", value: growwData?.fundamentals?.find(f => f.name.includes("ROCE"))?.value || (growwData?.stats?.sectorRoce ? `${Number(growwData.stats.sectorRoce).toFixed(2)}%` : null), tone: "ai" },
+              { label: "Debt/Equity", value: typeof growwData?.stats?.debtToEquity === 'number' ? growwData.stats.debtToEquity.toFixed(2) : growwData?.stats?.debtToEquity, tone: "warn" },
+              { label: "Current Ratio", value: typeof growwData?.stats?.currentRatio === 'number' ? growwData.stats.currentRatio.toFixed(2) : growwData?.stats?.currentRatio, tone: "ai" },
+              { label: "EPS (TTM)", value: growwData?.stats?.epsTtm ? `₹${Number(growwData.stats.epsTtm).toFixed(2)}` : null, tone: "white" },
+              { label: "Div Yield", value: growwData?.stats?.divYield ? `${Number(growwData.stats.divYield).toFixed(2)}%` : null, tone: "profit" },
+            ].map((item) => (
+              <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all flex flex-col justify-center">
+                <span className="text-[10px] uppercase font-black text-slate-600">{item.label}</span>
+                <div className={`text-lg font-bold mt-1 ${item.tone === 'profit' ? 'text-profit' : item.tone === 'ai' ? 'text-ai' : item.tone === 'warn' ? 'text-warn' : 'text-white'}`}>
+                  {item.value || "N/A"}
+                </div>
+              </div>
+            ))}
           </div>
         </GlassCard>
       </section>
+
+      {/* Balance Sheet Row */}
+      <div className="mb-6">
+        <GlassCard className="p-6">
+          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+             {growwData?.fundamentals?.slice(0, 8).map((metric) => (
+                <div key={metric.name} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{metric.name}</span>
+                  <div className="text-sm font-bold text-white mt-1 font-mono">{metric.value}</div>
+                </div>
+             ))}
+          </div>
+        </GlassCard>
+      </div>
 
       <div className="mt-8">
         <GlassCard className="p-8">

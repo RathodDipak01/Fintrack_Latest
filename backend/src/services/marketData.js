@@ -139,9 +139,17 @@ export async function getStockQuote(symbol) {
       price: quoteResult.regularMarketPrice,
       changeRaw: quoteResult.regularMarketChange,
       changePercent: quoteResult.regularMarketChangePercent,
-      exchange: quoteResult.exchange,
       currency: quoteResult.currency,
-      volume: quoteResult.regularMarketVolume
+      exchange: quoteResult.fullExchangeName || quoteResult.exchange,
+      volume: quoteResult.regularMarketVolume,
+      recommendation: quoteResult.recommendationKey,
+      analystRating: quoteResult.averageAnalystRating,
+      dayLow: quoteResult.regularMarketDayLow,
+      dayHigh: quoteResult.regularMarketDayHigh,
+      fiftyTwoWeekLow: quoteResult.fiftyTwoWeekLow,
+      fiftyTwoWeekHigh: quoteResult.fiftyTwoWeekHigh,
+      open: quoteResult.regularMarketOpen,
+      prevClose: quoteResult.regularMarketPreviousClose
     };
   } catch (error) { 
     console.error(`Quote error for ${symbol}:`, error.message);
