@@ -221,12 +221,70 @@ export async function getStockShareholdingPattern(symbol) {
 }
 
 /**
- * Fetch latest news for a specific ticker
+ * Fetch news from Google News RSS for broader coverage
+ */
+async function fetchGoogleNews(symbol) {
+  try {
+    const cleanSymbol = symbol.split('.')[0];
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanSymbol)}+stock+news&hl=en-IN&gl=IN&ceid=IN:en`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const xml = await res.text();
+    
+    const items = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    let match;
+    
+    while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+      const content = match[1];
+      const title = content.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/&amp;/g, '&');
+      const link = content.match(/<link>(.*?)<\/link>/)?.[1];
+      const pubDate = content.match(/<pubDate>(.*?)<\/pubDate>/)?.[1];
+      const source = content.match(/<source.*?>([\s\S]*?)<\/source>/)?.[1];
+      
+      if (title && link) {
+        items.push({
+          title,
+          link,
+          publisher: source || "Google News",
+          providerPublishTime: pubDate ? Math.floor(new Date(pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000),
+          summary: `Latest coverage from ${source || 'major financial portals'}.`
+        });
+      }
+    }
+    return items;
+  } catch (error) {
+    console.error("Google News fetch error:", error.message);
+    return [];
+  }
+}
+
+/**
+ * Fetch latest news for a specific ticker (Aggregated)
  */
 export async function fetchTickerNews(symbol) {
   try {
-    const results = await yf.search(symbol, { newsCount: 5 });
-    return results.news || [];
+    const [yahooNews, googleNews] = await Promise.all([
+      yf.search(symbol, { newsCount: 5 }).then(r => r.news || []).catch(() => []),
+      fetchGoogleNews(symbol)
+    ]);
+    
+    // Combine and remove duplicates based on title
+    const combined = [...yahooNews, ...googleNews];
+    const unique = [];
+    const seenTitles = new Set();
+    
+    const SEVEN_DAYS_AGO = Math.floor(Date.now() / 1000) - (10 * 24 * 60 * 60); // Last 10 days
+    
+    for (const item of combined) {
+      const normalizedTitle = item.title.toLowerCase().trim();
+      // Only keep unique, recent news
+      if (!seenTitles.has(normalizedTitle) && item.providerPublishTime > SEVEN_DAYS_AGO) {
+        seenTitles.add(normalizedTitle);
+        unique.push(item);
+      }
+    }
+    
+    return unique.sort((a, b) => b.providerPublishTime - a.providerPublishTime).slice(0, 9);
   } catch (error) {
     console.error(`News fetch error for ${symbol}:`, error.message);
     return [];
@@ -313,6 +371,9 @@ export async function getStockGrowwData(symbol) {
     if (!detailsRes.ok) throw new Error(`Groww Details Error: ${detailsRes.status}`);
     const data = await detailsRes.json();
     
+    // 3. Fetch latest news
+    const news = await fetchTickerNews(symbol).catch(() => []);
+    
     return {
       searchId: data.header?.searchId,
       logoUrl: data.header?.logoUrl,
@@ -322,6 +383,7 @@ export async function getStockGrowwData(symbol) {
       shareHoldingPattern: data.shareHoldingPattern,
       financialStatement: data.financialStatement,
       financialStatementV2: data.financialStatementV2,
+      news: news
     };
   } catch (error) {
     console.error(`Groww fetch error for ${symbol}:`, error.message);

@@ -424,27 +424,86 @@ export default function StocksPage() {
         </GlassCard>
       </section>
 
-      <div className="mt-6">
+      <div className="mt-8">
         <GlassCard className="p-8">
-          <SectionHeader eyebrow="Live" title={`Events & Corporate Actions`} />
-          <div className="thin-scrollbar flex gap-6 overflow-x-auto pb-4 mt-6">
-            {keyEvents.map((event) => (
-              <div
-                key={event.title}
-                className="min-w-[340px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-ai/40 transition-all hover:-translate-y-1"
-              >
-                <div className="h-10 w-10 rounded-xl bg-ai/20 flex items-center justify-center text-ai shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                  <LineChart size={20} />
-                </div>
-                <h3 className="mt-6 text-xl font-bold text-white">
-                  {event.title}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                  {event.text}
-                </p>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-8">
+            <SectionHeader eyebrow="Live Feed" title={`Market Intelligence & News`} />
+            <div className="flex gap-2">
+              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-ai/10 border border-ai/20 text-[10px] font-bold text-ai">
+                <div className="h-1 w-1 rounded-full bg-ai animate-pulse" />
+                LIVE UPDATES
+              </span>
+            </div>
           </div>
+          
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {(growwData?.news?.length > 0 ? growwData.news : keyEvents.slice(0, 3)).map((event, idx) => {
+              const thumbnail = event.thumbnail?.resolutions?.[0]?.url;
+              return (
+                <div
+                  key={event.uuid || idx}
+                  className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-ai/40 transition-all hover:-translate-y-1 group shadow-lg"
+                >
+                  {thumbnail && (
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <img src={thumbnail} alt={event.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-midnight to-transparent opacity-60" />
+                      <div className="absolute top-4 left-4 bg-ai/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white shadow-lg">
+                        {event.publisher || "NEWS"}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className={`p-6 flex flex-col flex-1 ${!thumbnail ? "border-t-4 border-ai/40" : ""}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                        {event.providerPublishTime ? new Date(event.providerPublishTime * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Just Now"}
+                      </span>
+                      {!thumbnail && (
+                         <span className="text-[10px] font-black text-ai uppercase tracking-widest bg-ai/10 px-2 py-0.5 rounded">
+                           {event.publisher || "Update"}
+                         </span>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-lg font-bold text-white leading-snug line-clamp-3 group-hover:text-ai transition-colors mb-3">
+                      {event.title}
+                    </h3>
+                    
+                    <p className="text-sm leading-relaxed text-slate-400 line-clamp-3 mb-6">
+                      {event.summary || event.text || "Latest market coverage and analyst insights regarding recent corporate developments and sector movements."}
+                    </p>
+                    
+                    <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                          {(event.publisher || "M")?.[0]}
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter truncate max-w-[100px]">
+                          {event.publisher || "Market Source"}
+                        </span>
+                      </div>
+                      
+                      <a 
+                        href={event.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-[11px] font-bold text-white hover:bg-ai hover:border-ai transition-all"
+                      >
+                        READ MORE <Search size={12} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {(!growwData?.news || growwData.news.length === 0) && (
+            <div className="mt-8 text-center p-12 rounded-3xl border border-dashed border-white/10 text-slate-500">
+              Fetching latest market intelligence...
+            </div>
+          )}
         </GlassCard>
       </div>
     </AppShell>
