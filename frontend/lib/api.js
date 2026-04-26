@@ -62,6 +62,7 @@ export const fintrackApi = {
     }),
   logout: () => fetchWithAuth("/auth/logout", { method: "POST" }),
   getMe: () => fetchWithAuth("/auth/me", { method: "GET" }),
+  updateProfile: (data) => fetchWithAuth("/auth/profile", { method: "PATCH", body: JSON.stringify(data) }),
 
   // --- Portfolio Analysis ---
   getHoldings: () => fetchWithAuth("/portfolio/holdings", { method: "GET" }),
@@ -92,4 +93,39 @@ export const fintrackApi = {
     fetchWithAuth("/watchlist", { method: "POST", body: JSON.stringify(data) }),
   removeFromWatchlist: (id) =>
     fetchWithAuth(`/watchlist/${id}`, { method: "DELETE" }),
+
+  // --- Broker Integration ---
+  syncAngelOne: () =>
+    fetchWithAuth("/broker/sync/angelone", { method: "POST" }),
+  syncZerodha: (requestToken) =>
+    fetchWithAuth("/broker/sync/zerodha", { 
+      method: "POST", 
+      body: JSON.stringify({ requestToken }) 
+    }),
+  syncUpstox: (authCode) =>
+    fetchWithAuth("/broker/sync/upstox", { 
+      method: "POST", 
+      body: JSON.stringify({ authCode }) 
+    }),
+  syncGroww: (accessToken) =>
+    fetchWithAuth("/broker/sync/groww", { 
+      method: "POST", 
+      body: JSON.stringify({ accessToken }) 
+    }),
+  getBrokerConnections: () =>
+    fetchWithAuth("/broker/connections", { method: "GET" }),
+  disconnectBroker: (source) =>
+    fetchWithAuth(`/broker/disconnect/${source}`, { method: "DELETE" }),
+
+  // --- Market Data & AI ---
+  getMarketIndices: () => fetchWithAuth("/market/indices", { method: "GET" }),
+  searchStocks: (query) => fetchWithAuth(`/market/search?q=${encodeURIComponent(query)}`, { method: "GET" }),
+  getQuote: (symbol) => fetchWithAuth(`/market/quote?symbol=${encodeURIComponent(symbol)}`, { method: "GET" }),
+  getShareholding: (symbol) => fetchWithAuth(`/market/shareholding?symbol=${encodeURIComponent(symbol)}`, { method: "GET" }),
+  getHistory: (symbol, interval = '1day') => fetchWithAuth(`/market/history?symbol=${encodeURIComponent(symbol)}&interval=${interval}`, { method: "GET" }),
+  generateAiInsights: (data) =>
+    fetchWithAuth("/ai/insights", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };

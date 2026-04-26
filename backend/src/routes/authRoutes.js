@@ -9,7 +9,10 @@ export const authRouter = express.Router();
 
 const credentialsSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(4)
+  password: z.string().min(4),
+  fullName: z.string().optional(),
+  phone: z.string().optional(),
+  plan: z.string().optional()
 });
 
 authRouter.post("/signup", async (req, res) => {
@@ -26,6 +29,9 @@ authRouter.post("/signup", async (req, res) => {
     const user = await prisma.user.create({
       data: {
         email: parsed.data.email,
+        fullName: parsed.data.fullName,
+        phone: parsed.data.phone,
+        plan: parsed.data.plan || "free",
         passwordHash
       }
     });
@@ -67,6 +73,26 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return error(res, 404, "User not found");
     return ok(res, sanitizeUser(user));
+  } catch (err) {
+    console.error(err);
+    return error(res, 500, "Internal server error");
+  }
+});
+
+authRouter.patch("/profile", requireAuth, async (req, res) => {
+  try {
+    const { fullName, phone, plan } = req.body;
+    
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: {
+        ...(fullName && { fullName }),
+        ...(phone && { phone }),
+        ...(plan && { plan })
+      }
+    });
+
+    return ok(res, sanitizeUser(user), "Profile updated");
   } catch (err) {
     console.error(err);
     return error(res, 500, "Internal server error");

@@ -1,35 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { BrainCircuit, ShieldAlert, Sparkles } from "lucide-react";
 import { ForecastChart } from "@/components/charts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader } from "@/components/ui";
 import { alerts, holdings, stockSignals } from "@/lib/portfolio-data";
+import { GeminiAdvisor } from "@/components/ai-advisor";
+import { fintrackApi } from "@/lib/api";
 
 export default function AiInsightsPage() {
-  const [insights, setInsights] = useState([
-    "Loading Gemini-ready portfolio insights...",
-  ]);
-  const [source, setSource] = useState("mock");
+  const [portfolioSummary, setPortfolioSummary] = useState(null);
+  const [liveHoldings, setLiveHoldings] = useState([]);
 
   useEffect(() => {
-    fetch("/api/ai-insights", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ holdings, alerts, riskScore: 62 }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setInsights(data.insights ?? insights);
-        setSource(data.source ?? "mock");
-      })
-      .catch(() =>
-        setInsights([
-          "Gemini mock mode is active. Server key can enable live model output.",
-        ]),
-      );
+    fintrackApi.getSummary().then(setPortfolioSummary).catch(() => null);
+    fintrackApi.getHoldings().then(setLiveHoldings).catch(() => null);
   }, []);
+
+  const displayHoldings = liveHoldings.length > 0 ? liveHoldings : holdings;
+
+  const allocation = useMemo(() => {
+    if (!displayHoldings.length) return [];
+    const sectors = displayHoldings.reduce((acc, h) => {
+      const val = h.qty * (h.currentPrice || h.avgCost || h.avg);
+      acc[h.sector] = (acc[h.sector] || 0) + val;
+      return acc;
+    }, {});
+    const total = Object.values(sectors).reduce((s, v) => s + v, 0);
+    return Object.entries(sectors)
+      .map(([name, value]) => ({ name, value: parseFloat(((value / total) * 100).toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+  }, [displayHoldings]);
+
+  const getMarketCap = (symbol) => {
+    const s = symbol.toUpperCase().split('.')[0];
+    const largeCaps = ["ADANIENT", "ADANIGREEN", "TCS", "HDFCBANK", "RELIANCE", "INFY", "ICICIBANK", "SBIN", "BHARTIARTL", "ITC", "LT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "KOTAKBANK", "AXISBANK", "ONGC", "NTPC", "TATAMOTORS", "POWERGRID", "ASIANPAINT", "HCLTECH"];
+    return largeCaps.includes(s) ? "Large cap" : 
+           ["CHOLAFIN", "DIVISLAB", "LTIM", "TVSMOTOR", "DLF", "EICHERMOT", "BAJAJ_AUTO", "TATASTEEL", "CONCOR"].includes(s) ? "Mid cap" : "Small cap";
+  };
+
+  const marketCapAllocation = useMemo(() => {
+    if (!displayHoldings.length) return [];
+    const capGroups = displayHoldings.reduce((acc, h) => {
+      const val = h.qty * (h.currentPrice || h.avgCost || h.avg);
+      const cap = getMarketCap(h.symbol);
+      acc[cap] = (acc[cap] || 0) + val;
+      return acc;
+    }, {});
+    const totalValue = Object.values(capGroups).reduce((s,v) => s+v, 0);
+    const order = ["Large cap", "Mid cap", "Small cap"];
+    return Object.entries(capGroups).map(([name, val]) => ({
+      name,
+      value: parseFloat(((val / totalValue) * 100).toFixed(2))
+    })).sort((a,b) => order.indexOf(a.name) - order.indexOf(b.name));
+  }, [displayHoldings]);
 
   return (
     <AppShell>
@@ -71,31 +96,12 @@ export default function AiInsightsPage() {
         </GlassCard>
       </section>
 
-      <GlassCard className="p-6">
-        <SectionHeader
-          eyebrow="Gemini"
-          title="Decision assistant"
-          action={
-            <Pill tone={source === "gemini" ? "profit" : "warn"}>
-              {source === "gemini" ? "Live" : "Mock"}
-            </Pill>
-          }
-        />
-        <div className="grid gap-3 md:grid-cols-3">
-          {insights.map((insight, index) => (
-            <div
-              key={insight}
-              className="rounded-lg border border-ai/20 bg-ai/10 p-4"
-            >
-              <Sparkles className="text-ai" size={18} />
-              <p className="mt-3 text-sm leading-6 text-slate-200">{insight}</p>
-              <span className="mt-4 inline-block text-xs text-slate-500">
-                Insight {index + 1}
-              </span>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
+      <GeminiAdvisor 
+        holdings={displayHoldings}
+        allocation={allocation}
+        marketCapAllocation={marketCapAllocation}
+        summary={portfolioSummary}
+      />
 
       <GlassCard className="p-6">
         <SectionHeader

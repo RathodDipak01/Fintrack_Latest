@@ -1,54 +1,69 @@
 import { env } from "../config/env.js";
 
-const fallbackInsights = [
-  "Portfolio risk is moderate because gains are concentrated in a few sectors.",
-  "ADANIPOWER has positive momentum, but the suggestion should be reviewed with risk tolerance.",
-  "Set alerts for IT exposure and support breaks before making any investment decision."
-];
-
 export async function generatePortfolioInsights(context) {
-  if (!env.geminiApiKey) {
-    return { source: "mock", insights: fallbackInsights };
+  if (!env.GEMINI_API_KEY) {
+    return { 
+      source: "mock", 
+      analysis: "### API KEY MISSING\nPlease add your `GEMINI_API_KEY` to the backend `.env` file to enable professional AI portfolio analysis." 
+    };
   }
 
-  const prompt = [
-    "You are an Indian equity research assistant for a suggestion-only app.",
-    "Do not say the user can buy or sell through this app.",
-    "Return exactly three concise beginner-friendly insights.",
-    "Mention risk and explain the reason behind each suggestion.",
-    `Context: ${JSON.stringify(context)}`
-  ].join("\n");
+  const { portfolioSummary, holdings, allocation, marketCapAllocation, userContext } = context;
+  const { riskAppetite = "Medium", horizon = "Long Term (5-10 years)" } = userContext;
+
+  const prompt = `
+Act as a Precision Risk Strategist and Quant Analyst. Analyze this portfolio with a surgical focus on **Risk Exposure** and **Time-Horizon Alignment**. 
+
+INPUT DATA:
+* Holdings: ${JSON.stringify(holdings.map(h => ({ symbol: h.symbol, qty: h.qty, avg: h.avgCost || h.avg, sector: h.sector || 'N/A' })))}
+* Horizon: ${horizon}
+* Risk Profile: ${riskAppetite}
+* Global Macro: High interest rates, fluctuating oil, tech momentum vs inflationary pressures.
+
+OUTPUT REQUIREMENTS:
+1. **RISK AUDIT**: (Keywords only - e.g., High Concentration, Volatility Spike, Sector Imbalance)
+2. **HORIZON ALIGNMENT**: (Is this portfolio fit for ${horizon}? - Verdict + Reasoning in 3 bullet points)
+3. **CORE VULNERABILITIES**: (Top 2 specific risks using financial keywords)
+4. **TACTICAL ADVICE**: (Point-based: Buy/Sell/Trim actions for ${riskAppetite} risk appetite)
+5. **KEYWORD SUMMARY**: (5 powerful keywords defining this portfolio's current state)
+
+STRICT STYLE: Short points. No fluff. Keyword-heavy. Disciplined tone.
+`;
 
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": env.geminiApiKey
+        "x-goog-api-key": env.GEMINI_API_KEY
       },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.35,
-          maxOutputTokens: 220
+          temperature: 0.1,
+          maxOutputTokens: 4096,
+          topP: 0.95
         }
       })
     });
 
     if (!response.ok) {
-      return { source: "mock", insights: fallbackInsights, warning: "Gemini request failed" };
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody?.error?.message || "Gemini API failure");
     }
 
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text).filter(Boolean).join("\n") || "";
-    const insights = text
-      .split(/\n+/)
-      .map((line) => line.replace(/^[-*\d.\s]+/, "").trim())
-      .filter(Boolean)
-      .slice(0, 3);
-
-    return { source: "gemini", insights: insights.length ? insights : fallbackInsights };
-  } catch {
-    return { source: "mock", insights: fallbackInsights, warning: "Gemini unavailable" };
+    const fullText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    
+    return { 
+      source: "gemini", 
+      analysis: fullText 
+    };
+  } catch (error) {
+    console.error("Gemini Error:", error.message);
+    return { 
+      source: "mock", 
+      analysis: "### AI Engine Unavailable\nWe encountered an error connecting to the AI analysis engine. Please verify your API key and network connection.\n\n**Error Details:** " + error.message
+    };
   }
 }

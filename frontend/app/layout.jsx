@@ -8,6 +8,8 @@ const inter = Inter({
   variable: "--font-inter", // optional but useful
 });
 
+import { SettingsProvider } from "@/context/settings-context";
+
 export const metadata = {
   title: "Fintrack",
   description: "Fintrack — AI-enhanced portfolio tracking and decision support",
@@ -15,8 +17,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="dark" data-scroll-behavior="smooth">
-      <body className={`${inter.className} antialiased`}>{children}</body>
+    <html lang="en" data-scroll-behavior="smooth">
+      <body className={`${inter.className} antialiased`}>
+        <SettingsProvider>
+          {children}
+        </SettingsProvider>
+      </body>
     </html>
   );
 }

@@ -14,8 +14,16 @@ export function destroySession(token) {
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  let token = header.startsWith("Bearer ") ? header.slice(7) : "";
   
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
+  
+  if (!token && req.query.state) {
+    token = req.query.state;
+  }
+
   if (!token) {
     return error(res, 401, "Authentication required");
   }

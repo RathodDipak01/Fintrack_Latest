@@ -1,38 +1,28 @@
 "use client";
 
 import { Moon, SunMedium } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSettings } from "@/context/settings-context";
 
 export function ThemeToggle({ compact = false }) {
-  const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("fintrack-theme");
-    const initial = saved === "light" || saved === "dark" ? saved : "dark";
-    document.documentElement.dataset.theme = initial;
-    setTheme(initial);
-  }, []);
-
-  function updateTheme(nextTheme) {
-    document.documentElement.dataset.theme = nextTheme;
-    window.localStorage.setItem("fintrack-theme", nextTheme);
-    setTheme(nextTheme);
-  }
+  const { settings, updateSetting } = useSettings();
+  
+  // Logic: Consider any theme other than "Light (Pro)" as a dark variation
+  const isDark = settings.theme !== "Light (Pro)";
 
   return (
     <div
       className={`flex rounded-md border border-white/10 bg-white/5 p-1 ${compact ? "" : "min-w-[92px]"}`}
     >
       <button
-        onClick={() => updateTheme("dark")}
-        className={`rounded-md p-2 transition ${theme === "dark" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"}`}
+        onClick={() => updateSetting("theme", "Dark (Cyber)")}
+        className={`rounded-md p-2 transition ${isDark ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"}`}
         aria-label="Dark mode"
       >
         <Moon size={15} />
       </button>
       <button
-        onClick={() => updateTheme("light")}
-        className={`rounded-md p-2 transition ${theme === "light" ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"}`}
+        onClick={() => updateSetting("theme", "Light (Pro)")}
+        className={`rounded-md p-2 transition ${!isDark ? "bg-white/10 text-white" : "text-slate-500 hover:text-white"}`}
         aria-label="Light mode"
       >
         <SunMedium size={15} />

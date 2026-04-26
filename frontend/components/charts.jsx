@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect, useRef } from "react";
 
 import {
   Area,
@@ -12,6 +13,8 @@ import {
   LineChart,
   Pie,
   PieChart,
+  Label,
+  Sector,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -102,25 +105,154 @@ export function PerformanceChart() {
   );
 }
 
-export function AllocationChart() {
+const COLORS = ["#3B82F6", "#22C55E", "#EAB308", "#EF4444", "#A855F7", "#F97316", "#06B6D4", "#EC4899", "#8B5CF6", "#14B8A6"];
+
+export function DonutChart({ data, innerData, title = "Allocation", onItemClick, highlightCriteria, highlightKey }) {
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [activeInnerIndex, setActiveInnerIndex] = useState(-1);
+  const [clickedItem, setClickedItem] = useState(null);
+  const chartRef = useRef(null);
+  
+  const chartData = data && data.length > 0 ? data : allocationData;
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (chartRef.current && !chartRef.current.contains(event.target)) {
+        setClickedItem(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const onPieEnter = (_, index) => setActiveIndex(index);
+  const onPieLeave = () => setActiveIndex(-1);
+  
+  const onInnerPieEnter = (_, index) => setActiveInnerIndex(index);
+  const onInnerPieLeave = () => setActiveInnerIndex(-1);
+
+  const activeItem = activeInnerIndex >= 0 && innerData 
+    ? innerData[activeInnerIndex] 
+    : (activeIndex >= 0 ? chartData[activeIndex] : null);
+
+  const handleInnerClick = (entry) => {
+    setClickedItem(clickedItem?.name === entry.name ? null : { ...entry, isInner: true });
+    if (onItemClick) onItemClick(entry);
+  };
+
+  const handleOuterClick = (entry, index) => {
+    setClickedItem(clickedItem?.name === entry.name ? null : { 
+      ...entry, 
+      isInner: false,
+      color: entry.color || COLORS[index % COLORS.length]
+    });
+    if (onItemClick) onItemClick(entry);
+  };
+
   return (
-    <ResponsiveContainer width="100%" height={230}>
-      <PieChart>
-        <Pie
-          data={allocationData}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={58}
-          outerRadius={92}
-          paddingAngle={4}
-        >
-          {allocationData.map((entry) => (
-            <Cell key={entry.name} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip contentStyle={tooltipStyle} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div ref={chartRef} className="relative w-full h-[230px]">
+      {/* Click Readout Panel */}
+      {clickedItem && (
+        <div className="absolute top-0 left-0 z-10 bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-lg p-3 shadow-xl pointer-events-none transition-all duration-300 animate-in fade-in zoom-in-95">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div 
+              className="w-2.5 h-2.5 rounded-full" 
+              style={{ backgroundColor: clickedItem.color || "#06B6D4" }} 
+            />
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              {clickedItem.isInner ? "Cap Group" : "Holding"}
+            </span>
+          </div>
+          <div className="text-white font-semibold text-sm mb-0.5">{clickedItem.name}</div>
+          <div className="text-blue-400 font-mono text-base font-bold">{clickedItem.value.toFixed(2)}%</div>
+          {clickedItem.category && (
+            <div className="text-slate-500 text-xs mt-1">{clickedItem.category}</div>
+          )}
+        </div>
+      )}
+
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          {activeItem ? activeItem.name : title}
+        </span>
+        {activeItem && (
+          <span className="mt-0.5 text-lg font-medium text-white transition-opacity">
+            {activeItem.value.toFixed(2)}%
+          </span>
+        )}
+      </div>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          {innerData && (
+            <Pie
+              data={innerData}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={45}
+              outerRadius={65}
+              paddingAngle={2}
+              stroke="none"
+              isAnimationActive={true}
+              onMouseEnter={onInnerPieEnter}
+              onMouseLeave={onInnerPieLeave}
+              onTouchStart={onInnerPieEnter}
+              onClick={handleInnerClick}
+            >
+              {innerData.map((entry, index) => (
+                <Cell 
+                  key={entry.name} 
+                  fill={entry.color || ['#4F46E5', '#818CF8', '#C7D2FE'][index % 3]} 
+                  className="transition-all duration-300 ease-out origin-center hover:opacity-80"
+                  style={{
+                    transform: activeInnerIndex === index ? 'scale(1.05)' : 'scale(1)'
+                  }}
+                />
+              ))}
+            </Pie>
+          )}
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={innerData ? 75 : 65}
+            outerRadius={innerData ? 95 : 92}
+            paddingAngle={2}
+            stroke="none"
+            isAnimationActive={true}
+            onClick={handleOuterClick}
+            onMouseEnter={onPieEnter}
+            onMouseLeave={onPieLeave}
+            onTouchStart={onPieEnter}
+          >
+            {chartData.map((entry, index) => {
+              const isInnerHovered = innerData && activeInnerIndex >= 0;
+              const matchesInner = isInnerHovered && entry.category === innerData[activeInnerIndex].name;
+              
+              // External Highlight Logic
+              const isHighlighted = highlightCriteria && entry[highlightKey] === highlightCriteria;
+              
+              const shouldPopOut = activeIndex === index || matchesInner || isHighlighted;
+              
+              // If there's an external highlight, dim others unless they are hovered
+              const hasHighlightMode = !!highlightCriteria;
+              const opacity = (isInnerHovered && !matchesInner) || (hasHighlightMode && !isHighlighted && activeIndex !== index) ? 0.25 : 1;
+              
+              return (
+                <Cell 
+                  key={entry.name} 
+                  fill={entry.color || COLORS[index % COLORS.length]} 
+                  className="transition-all duration-300 ease-out origin-center"
+                  style={{
+                    transform: shouldPopOut ? 'scale(1.08)' : 'scale(1)',
+                    opacity: opacity
+                  }}
+                />
+              );
+            })}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 

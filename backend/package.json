@@ -17,9 +17,13 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
+    "kiteconnect": "^5.3.0",
     "morgan": "^1.10.0",
+    "otplib": "^13.4.0",
     "pg": "^8.20.0",
     "smartapi-javascript": "^1.0.27",
+    "upstox-js-sdk": "^2.26.0",
+    "yahoo-finance2": "^2.11.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {

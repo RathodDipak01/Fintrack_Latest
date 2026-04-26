@@ -31,9 +31,9 @@ portfolioRouter.get("/summary", async (req, res) => {
     const totalReturns = currentValue - totalInvestment;
     
     return ok(res, {
-      totalInvestment: Math.round(totalInvestment),
-      currentValue: Math.round(currentValue),
-      totalReturns: Math.round(totalReturns),
+      totalInvestment: parseFloat(totalInvestment.toFixed(2)),
+      currentValue: parseFloat(currentValue.toFixed(2)),
+      totalReturns: parseFloat(totalReturns.toFixed(2)),
       todayChange: 0, // Mocked until live feed integrated
       todayChangePercent: 0,
       riskScore: 65,
@@ -52,10 +52,10 @@ portfolioRouter.get("/allocation", async (req, res) => {
     
     if (totalValue === 0) return ok(res, []);
 
-    // Group by sector for industry analysis
+    // Group by sector for industry analysis using fresh mapping
     const grouped = holdings.reduce((acc, h) => {
       const val = h.qty * (h.currentPrice || h.avgCost);
-      const sector = h.sector || "Other";
+      const sector = getSector(h.symbol) || "Diversified";
       acc[sector] = (acc[sector] || 0) + val;
       return acc;
     }, {});
@@ -104,12 +104,16 @@ portfolioRouter.get("/holdings", async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
-    // Add computed metrics on the fly before dispatch
-    const enrichedHoldings = userHoldings.map(h => ({
-      ...h,
-      changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
-      pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
-    }));
+    // Add computed metrics and enrich sector on the fly
+    const enrichedHoldings = userHoldings.map(h => {
+      const currentSector = h.sector === "Trading" || !h.sector ? getSector(h.symbol) : h.sector;
+      return {
+        ...h,
+        sector: currentSector,
+        changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
+        pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
+      };
+    });
     
     return ok(res, enrichedHoldings);
   } catch (err) {
