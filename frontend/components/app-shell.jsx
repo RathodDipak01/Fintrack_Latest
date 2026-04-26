@@ -104,20 +104,12 @@ function TopNav({ onNotifications }) {
             </p>
           </div>
         </Link>
-        <nav className="ml-4 hidden items-center gap-1 overflow-x-auto xl:flex">
-          {nav.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-md px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white ${active ? "bg-white/10 text-white" : "text-slate-400"}`}
-              >
-                {t(item.label)}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="ml-6 hidden items-center gap-2 lg:flex">
+          <div className="h-4 w-px bg-white/10" />
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-2">
+            Terminal {pathname.split('/')[1] || 'Dashboard'}
+          </p>
+        </div>
         <div className="ml-auto hidden min-w-72 items-center md:flex z-50">
           <StockSearchBar />
         </div>
