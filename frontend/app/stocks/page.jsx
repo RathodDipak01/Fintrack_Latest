@@ -226,73 +226,81 @@ export default function StocksPage() {
               eyebrow="Intelligence"
               title={`Key Ratios`}
             />
-            <p className="mt-2 text-slate-400">Valuation and efficiency analysis.</p>
+            <p className="mt-2 text-slate-400">
+              Valuation and efficiency analysis.
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-ai/20 bg-ai/5 p-6 hover:bg-ai/10 transition-all group">
+        {/* Changed grid layout */}
+        <div className="grid gap-6 md:grid-cols-2">
+
+          {/* Valuation */}
+          <div className="rounded-2xl border border-ai/20 bg-ai/5 p-6 hover:bg-ai/10 transition-all group h-full">
             <div className="flex justify-between items-start">
               <Pill tone="profit">Valuation</Pill>
             </div>
-            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-ai transition-colors">Pricing Metrics</h4>
-            <div className="mt-4 space-y-3">
+
+            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-ai transition-colors">
+              Pricing Metrics
+            </h4>
+
+            <div className="mt-6 space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">P/E Ratio</span>
-                <span className="text-white font-mono font-bold">{growwData?.stats?.peRatio || "N/A"}</span>
+                <span className="text-white font-mono font-bold">
+                  {growwData?.stats?.peRatio || "N/A"}
+                </span>
               </div>
+
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Industry P/E</span>
-                <span className="text-white font-mono">{growwData?.stats?.industryPe?.toFixed(2) || "N/A"}</span>
+                <span className="text-white font-mono">
+                  {growwData?.stats?.industryPe?.toFixed(2) || "N/A"}
+                </span>
               </div>
+
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">P/B Ratio</span>
-                <span className="text-white font-mono">{growwData?.stats?.pbRatio || "N/A"}</span>
+                <span className="text-white font-mono">
+                  {growwData?.stats?.pbRatio || "N/A"}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-profit/20 bg-profit/5 p-6 hover:bg-profit/10 transition-all group">
+          {/* Efficiency */}
+          <div className="rounded-2xl border border-profit/20 bg-profit/5 p-6 hover:bg-profit/10 transition-all group h-full">
             <Pill tone="profit">Efficiency</Pill>
-            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-profit transition-colors">Return Profile</h4>
-            <div className="mt-4 space-y-3">
+
+            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-profit transition-colors">
+              Return Profile
+            </h4>
+
+            <div className="mt-6 space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">ROE</span>
-                <span className="text-profit font-mono font-bold">{growwData?.stats?.roe?.toFixed(2) || "N/A"}%</span>
+                <span className="text-profit font-mono font-bold">
+                  {growwData?.stats?.roe?.toFixed(2) || "N/A"}%
+                </span>
               </div>
+
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Div. Yield</span>
-                <span className="text-white font-mono">{growwData?.stats?.divYield?.toFixed(2) || "N/A"}%</span>
+                <span className="text-white font-mono">
+                  {growwData?.stats?.divYield?.toFixed(2) || "N/A"}%
+                </span>
               </div>
+
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Book Value</span>
-                <span className="text-white font-mono">₹{growwData?.stats?.bookValue?.toFixed(2) || "N/A"}</span>
+                <span className="text-white font-mono">
+                  ₹{growwData?.stats?.bookValue?.toFixed(2) || "N/A"}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-all group">
-            <Pill tone="warn">Analyst Rating</Pill>
-            <h4 className="mt-6 text-xl font-bold text-white">Global Sentiment</h4>
-            <div className="mt-4 flex items-center gap-6">
-              <div className={`grid h-16 w-16 place-items-center rounded-full ${isUp ? "bg-profit/20 text-profit border border-profit/50" : "bg-ai/20 text-ai border border-ai/50"} text-sm font-black shadow-glow`}>
-                {isUp ? "BUY" : "HOLD"}
-              </div>
-              <div className="flex-1 space-y-2">
-                {analystRatings.slice(0, 2).map((rating) => (
-                  <div key={rating.label} className="space-y-1">
-                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
-                      <span>{rating.label}</span>
-                      <span>{rating.value}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full transition-all duration-1000" style={{ width: `${rating.value}%`, background: rating.color }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </GlassCard>
 
@@ -349,7 +357,7 @@ export default function StocksPage() {
               </div>
             ))}
           </div>
-          <div 
+          <div
             className="mt-6 p-4 rounded-xl bg-ai/5 border border-ai/10 cursor-pointer hover:bg-ai/10 transition-all group"
             onClick={() => setExpandedSummary(!expandedSummary)}
           >
@@ -379,13 +387,13 @@ export default function StocksPage() {
                 <span>₹{quote?.dayHigh?.toLocaleString('en-IN') || "N/A"}</span>
               </div>
               <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
-                <div 
-                  className="absolute h-full bg-ai shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000" 
-                  style={{ 
+                <div
+                  className="absolute h-full bg-ai shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000"
+                  style={{
                     left: `${((quote?.price - quote?.dayLow) / (quote?.dayHigh - quote?.dayLow)) * 100}%`,
                     width: '4px',
                     transform: 'translateX(-50%)'
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -401,13 +409,13 @@ export default function StocksPage() {
                 <span>₹{quote?.fiftyTwoWeekHigh?.toLocaleString('en-IN') || "N/A"}</span>
               </div>
               <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
-                <div 
-                  className="absolute h-full bg-profit shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000" 
-                  style={{ 
+                <div
+                  className="absolute h-full bg-profit shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000"
+                  style={{
                     left: `${((quote?.price - quote?.fiftyTwoWeekLow) / (quote?.fiftyTwoWeekHigh - quote?.fiftyTwoWeekLow)) * 100}%`,
                     width: '4px',
                     transform: 'translateX(-50%)'
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -479,12 +487,12 @@ export default function StocksPage() {
         <GlassCard className="p-6">
           <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-             {growwData?.fundamentals?.slice(0, 8).map((metric) => (
-                <div key={metric.name} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{metric.name}</span>
-                  <div className="text-sm font-bold text-white mt-1 font-mono">{metric.value}</div>
-                </div>
-             ))}
+            {growwData?.fundamentals?.slice(0, 8).map((metric) => (
+              <div key={metric.name} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{metric.name}</span>
+                <div className="text-sm font-bold text-white mt-1 font-mono">{metric.value}</div>
+              </div>
+            ))}
           </div>
         </GlassCard>
       </div>
@@ -500,7 +508,7 @@ export default function StocksPage() {
               </span>
             </div>
           </div>
-          
+
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {(growwData?.news?.length > 0 ? growwData.news : keyEvents.slice(0, 3)).map((event, idx) => {
               const thumbnail = event.thumbnail?.resolutions?.[0]?.url;
@@ -518,27 +526,27 @@ export default function StocksPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <div className={`p-6 flex flex-col flex-1 ${!thumbnail ? "border-t-4 border-ai/40" : ""}`}>
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
                         {event.providerPublishTime ? new Date(event.providerPublishTime * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Just Now"}
                       </span>
                       {!thumbnail && (
-                         <span className="text-[10px] font-black text-ai uppercase tracking-widest bg-ai/10 px-2 py-0.5 rounded">
-                           {event.publisher || "Update"}
-                         </span>
+                        <span className="text-[10px] font-black text-ai uppercase tracking-widest bg-ai/10 px-2 py-0.5 rounded">
+                          {event.publisher || "Update"}
+                        </span>
                       )}
                     </div>
-                    
+
                     <h3 className="text-lg font-bold text-white leading-snug line-clamp-3 group-hover:text-ai transition-colors mb-3">
                       {event.title}
                     </h3>
-                    
+
                     <p className="text-sm leading-relaxed text-slate-400 line-clamp-3 mb-6">
                       {event.summary || event.text || "Latest market coverage and analyst insights regarding recent corporate developments and sector movements."}
                     </p>
-                    
+
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
                       <div className="flex items-center gap-2">
                         <div className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold text-white uppercase">
@@ -548,11 +556,11 @@ export default function StocksPage() {
                           {event.publisher || "Market Source"}
                         </span>
                       </div>
-                      
-                      <a 
-                        href={event.link} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+
+                      <a
+                        href={event.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-[11px] font-bold text-white hover:bg-ai hover:border-ai transition-all"
                       >
                         READ MORE <Search size={12} />
@@ -563,7 +571,7 @@ export default function StocksPage() {
               );
             })}
           </div>
-          
+
           {(!growwData?.news || growwData.news.length === 0) && (
             <div className="mt-8 text-center p-12 rounded-3xl border border-dashed border-white/10 text-slate-500">
               Fetching latest market intelligence...
