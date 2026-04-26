@@ -70,172 +70,172 @@ export default function StocksPage() {
 
   return (
     <AppShell>
-      <div>
+      <div className="mb-8">
         <div className="flex items-center gap-4">
           {growwData?.logoUrl && (
-            <img src={growwData.logoUrl} alt={stockName} className="w-12 h-12 rounded-full object-contain bg-white" />
+            <img src={growwData.logoUrl} alt={stockName} className="w-14 h-14 rounded-full object-contain bg-white p-1 shadow-glow" />
           )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ai">
-              Stock Detail
+              Market Intelligence
             </p>
-            <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl">
+            <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl tracking-tight">
               {loading ? "Loading..." : stockName}
             </h1>
           </div>
         </div>
-        <p className="mt-4 max-w-3xl text-slate-400">
-          Global market intelligence for {stockName}. Real-time prices, shareholding patterns, and technical analytics.
+        <p className="mt-4 max-w-3xl text-slate-400 leading-relaxed">
+          {growwData?.details?.businessSummary?.split('.')[0]}. Real-time prices, shareholding patterns, and technical analytics.
         </p>
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr] mt-8">
-        <GlassCard className="overflow-hidden p-0">
-          <div className="border-b border-white/10 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">{quote?.exchange || "Market"}: {symbol}</p>
-                <h2 className="mt-1 text-2xl font-semibold text-white flex items-center gap-2">
-                  {stockPrice} 
-                  {!loading && (
-                    <span className={`text-base ${isUp ? "text-profit" : "text-loss"}`}>
-                      {stockChangeRaw ? `${isUp ? "+" : ""}${stockChangeRaw} ` : ""}
-                      ({isUp ? "+" : ""}{stockChangePct}%)
-                    </span>
-                  )}
-                </h2>
-              </div>
-              <div className="flex gap-2">
-                <button className="rounded-md border border-white/10 p-2 text-slate-300 hover:bg-white/5 transition">
-                  <Plus size={18} />
-                </button>
-                <button className="rounded-md border border-white/10 p-2 text-slate-300 hover:bg-white/5 transition">
-                  <Search size={18} />
-                </button>
-              </div>
+      {/* Main Chart Section - Full Width */}
+      <GlassCard className="overflow-hidden p-0 mb-6">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{quote?.exchange || "NSE"}: {symbol}</p>
+              <h2 className="mt-1 text-3xl font-bold text-white flex items-center gap-3">
+                {stockPrice} 
+                {!loading && (
+                  <span className={`text-lg font-semibold ${isUp ? "text-profit" : "text-loss"}`}>
+                    {stockChangeRaw ? `${isUp ? "+" : ""}${stockChangeRaw} ` : ""}
+                    ({isUp ? "+" : ""}{stockChangePct}%)
+                  </span>
+                )}
+              </h2>
             </div>
-            <div className="mt-5 h-[300px] w-full">
-              <CustomChart symbol={symbol} />
+            <div className="flex gap-3">
+              <button className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 hover:bg-white/10 hover:text-white transition-all shadow-sm">
+                <Plus size={20} />
+              </button>
+              <button className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 hover:bg-white/10 hover:text-white transition-all shadow-sm">
+                <Search size={20} />
+              </button>
             </div>
-            <div className="thin-scrollbar mt-4 flex gap-2 overflow-x-auto">
+          </div>
+          
+          <div className="h-[500px] w-full rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0a]">
+            <CustomChart symbol={symbol} />
+          </div>
+
+          <div className="thin-scrollbar mt-6 flex items-center justify-between gap-4 overflow-x-auto">
+            <div className="flex gap-2">
               {["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"].map(
                 (range, index) => (
                   <button
                     key={range}
-                    className={`shrink-0 rounded-md px-4 py-2 text-sm transition ${index === 0 ? "bg-white text-midnight" : "border border-white/10 text-slate-300 hover:bg-white/5"}`}
+                    className={`shrink-0 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${index === 0 ? "bg-white text-midnight shadow-lg scale-105" : "border border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"}`}
                   >
                     {range}
                   </button>
                 ),
               )}
-              <button className="shrink-0 rounded-md border border-ai/30 px-4 py-2 text-sm text-ai hover:bg-ai hover:text-white transition">
-                Chart
-              </button>
             </div>
+            <button className="shrink-0 rounded-lg border border-ai/30 bg-ai/10 px-6 py-2.5 text-sm font-bold text-ai hover:bg-ai hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+              Advanced Chart
+            </button>
           </div>
-          <div className="flex border-b border-white/10 px-5">
-            {["Overview", "Live", "F&O", "Notes"].map((tab, index) => (
-              <button
-                key={tab}
-                className={`relative px-4 py-4 text-sm transition ${index === 0 ? "text-white" : "text-slate-400 hover:text-white"}`}
-              >
-                {tab}
-                {index === 0 && (
-                  <span className="absolute inset-x-4 bottom-0 h-1 rounded-full bg-ai" />
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="p-5">
-            <h3 className="text-xl font-semibold text-white">
-              Insights on {stockName}
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
-              Recent movement and critical parameters analysis.
-            </p>
-            <div className="thin-scrollbar mt-5 flex gap-4 overflow-x-auto pb-2">
-              <div className="min-w-[260px] rounded-lg border border-ai/40 bg-ai/10 p-4">
-                <Pill tone="profit">Key Metrics</Pill>
-                <h4 className="mt-5 text-lg font-semibold text-white">Valuation</h4>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  P/E Ratio: {growwData?.stats?.peRatio || "N/A"}<br/>
-                  Industry P/E: {growwData?.stats?.industryPe?.toFixed(2) || "N/A"}<br/>
-                  P/B Ratio: {growwData?.stats?.pbRatio || "N/A"}
-                </p>
-              </div>
-              <div className="min-w-[260px] rounded-lg border border-ai/40 bg-ai/10 p-4">
-                <Pill tone="warn">Returns</Pill>
-                <h4 className="mt-5 text-lg font-semibold text-white">Efficiency</h4>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  ROE: {growwData?.stats?.roe?.toFixed(2) || "N/A"}%<br/>
-                  Dividend Yield: {growwData?.stats?.divYield?.toFixed(2) || "N/A"}%<br/>
-                  Book Value: ₹{growwData?.stats?.bookValue?.toFixed(2) || "N/A"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </GlassCard>
+        </div>
+      </GlassCard>
 
-        <div className="space-y-5">
-          <GlassCard className="p-6">
+      {/* Insights Section - Full Width */}
+      <GlassCard className="p-8 mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
             <SectionHeader
-              eyebrow="Candlestick"
-              title="Technical chart"
-              action={<Pill tone={isUp ? "profit" : "loss"}>{isUp ? "UP" : "DOWN"} {Math.abs(parseFloat(stockChangePct))}%</Pill>}
+              eyebrow="Intelligence"
+              title={`Insights on ${stockName}`}
             />
-            <div className="h-[400px] w-full">
-              <CustomChart symbol={symbol} />
+            <p className="mt-2 text-slate-400">Critical parameters and efficiency analysis.</p>
+          </div>
+          <div className="hidden md:flex gap-4">
+             {["Overview", "Financials", "Peers"].map((t, i) => (
+               <span key={t} className={`text-xs font-bold uppercase tracking-widest ${i===0 ? 'text-ai' : 'text-slate-600'}`}>{t}</span>
+             ))}
+          </div>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-ai/20 bg-ai/5 p-6 hover:bg-ai/10 transition-all group">
+            <div className="flex justify-between items-start">
+              <Pill tone="profit">Valuation</Pill>
+              <div className="h-2 w-2 rounded-full bg-ai animate-pulse" />
             </div>
-          </GlassCard>
+            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-ai transition-colors">Pricing Metrics</h4>
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">P/E Ratio</span>
+                <span className="text-white font-mono font-bold">{growwData?.stats?.peRatio || "N/A"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Industry P/E</span>
+                <span className="text-white font-mono">{growwData?.stats?.industryPe?.toFixed(2) || "N/A"}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">P/B Ratio</span>
+                <span className="text-white font-mono">{growwData?.stats?.pbRatio || "N/A"}</span>
+              </div>
+            </div>
+          </div>
 
-          <GlassCard className="p-6">
-            <SectionHeader
-              eyebrow="Analyst rating"
-              title="Global Sentiment"
-              action={<Pill tone={isUp ? "profit" : "loss"}>{isUp ? "POSITIVE" : "NEUTRAL"}</Pill>}
-            />
-            <div className="grid gap-5 md:grid-cols-[150px_1fr] md:items-center">
-              <div className={`grid h-32 w-32 place-items-center rounded-full ${isUp ? "bg-profit" : "bg-ai"} text-xl font-bold tracking-[0.16em] text-white shadow-glow text-center p-2`}>
+          <div className="rounded-2xl border border-profit/20 bg-profit/5 p-6 hover:bg-profit/10 transition-all group">
+            <Pill tone="profit">Efficiency</Pill>
+            <h4 className="mt-6 text-xl font-bold text-white group-hover:text-profit transition-colors">Return Profile</h4>
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">ROE</span>
+                <span className="text-profit font-mono font-bold">{growwData?.stats?.roe?.toFixed(2) || "N/A"}%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Div. Yield</span>
+                <span className="text-white font-mono">{growwData?.stats?.divYield?.toFixed(2) || "N/A"}%</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Book Value</span>
+                <span className="text-white font-mono">₹{growwData?.stats?.bookValue?.toFixed(2) || "N/A"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-all group">
+            <Pill tone="warn">Analyst Rating</Pill>
+            <h4 className="mt-6 text-xl font-bold text-white">Global Sentiment</h4>
+            <div className="mt-4 flex items-center gap-6">
+              <div className={`grid h-16 w-16 place-items-center rounded-full ${isUp ? "bg-profit/20 text-profit border border-profit/50" : "bg-ai/20 text-ai border border-ai/50"} text-sm font-black shadow-glow`}>
                 {isUp ? "BUY" : "HOLD"}
               </div>
-              <div className="space-y-4">
-                {analystRatings.map((rating) => (
-                  <div
-                    key={rating.label}
-                    className="grid grid-cols-[1fr_56px_54px] items-center gap-3 text-sm"
-                  >
-                    <div className="h-3 rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${rating.value}%`,
-                          background: rating.color,
-                        }}
-                      />
+              <div className="flex-1 space-y-2">
+                {analystRatings.slice(0, 2).map((rating) => (
+                  <div key={rating.label} className="space-y-1">
+                    <div className="flex justify-between text-[10px] uppercase font-bold text-slate-500">
+                      <span>{rating.label}</span>
+                      <span>{rating.value}%</span>
                     </div>
-                    <span className="text-slate-300 font-mono">{rating.value}%</span>
-                    <span className="text-slate-400">{rating.label}</span>
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full transition-all duration-1000" style={{ width: `${rating.value}%`, background: rating.color }} />
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          </GlassCard>
+          </div>
         </div>
-      </section>
+      </GlassCard>
 
-      <section className="grid gap-5 xl:grid-cols-2 mt-5">
+      <section className="grid gap-6 xl:grid-cols-2">
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Shareholding" title="Shareholding patterns" />
-          <div className="mt-4 overflow-x-auto rounded-lg border border-white/10">
+          <SectionHeader eyebrow="Shareholding" title="Ownership structure" />
+          <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="border-b border-white/10 bg-white/5 text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Investor</th>
+                  <th className="px-5 py-4 font-bold uppercase tracking-tighter text-[10px]">Investor</th>
                   {(shKeys.length > 0 ? shKeys : ["'26", "'25", "'24", "'23", "'22", "'21"]).map(
                     (year, idx) => (
                       <th
                         key={year}
-                        className={`px-4 py-3 font-medium text-right ${idx === 0 ? "text-ai font-bold" : ""}`}
+                        className={`px-4 py-4 font-bold text-right ${idx === 0 ? "text-ai" : ""}`}
                       >
                         {year}
                       </th>
@@ -245,14 +245,14 @@ export default function StocksPage() {
               </thead>
               <tbody className="divide-y divide-white/10">
                 {(shRows || (Array.isArray(shareholding) ? shareholding : shareholdingPatterns)).map((row) => (
-                  <tr key={row.investor} className="hover:bg-white/[0.02] transition">
-                    <td className="px-4 py-4 font-medium text-white whitespace-nowrap">
+                  <tr key={row.investor} className="hover:bg-white/[0.04] transition-colors group">
+                    <td className="px-5 py-4 font-semibold text-white whitespace-nowrap group-hover:text-ai transition-colors">
                       {row.investor}
                     </td>
                     {row.values.map((val, idx) => (
                       <td
                         key={idx}
-                        className={`px-4 py-4 text-right font-mono whitespace-nowrap ${idx === 0 ? "text-white font-semibold" : "text-slate-400"}`}
+                        className={`px-4 py-4 text-right font-mono whitespace-nowrap ${idx === 0 ? "text-white font-bold" : "text-slate-500"}`}
                       >
                         {val}%
                       </td>
@@ -266,10 +266,12 @@ export default function StocksPage() {
 
         <GlassCard className="p-6">
           <SectionHeader eyebrow="Company" title="Entity Profile" />
-          <p className="text-sm leading-7 text-slate-300 line-clamp-3">
-            {growwData?.details?.businessSummary || `${stockName} (${symbol}) is a prominent entity listed on the ${quote?.exchange || "NSE"}. The company operates in the ${quote?.sector || "various"} sector.`}
-          </p>
-          <div className="mt-5 divide-y divide-white/10 rounded-lg border border-white/10">
+          <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
+            <p className="text-sm leading-7 text-slate-400 italic">
+              "{growwData?.details?.businessSummary || `${stockName} (${symbol}) is a prominent entity listed on the ${quote?.exchange || "NSE"}.`}"
+            </p>
+          </div>
+          <div className="mt-6 space-y-1">
             {[
               ["Organization", stockName],
               ["CEO", growwData?.details?.ceo || "N/A"],
@@ -279,10 +281,10 @@ export default function StocksPage() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex justify-between gap-4 px-4 py-4 text-sm hover:bg-white/[0.02] transition"
+                className="flex justify-between items-center px-4 py-4 text-sm rounded-lg hover:bg-white/[0.04] transition-all"
               >
-                <span className="text-slate-400">{label}</span>
-                <span className="text-right font-semibold text-white truncate max-w-[200px]" title={String(value)}>
+                <span className="text-slate-500 font-medium">{label}</span>
+                <span className="text-right font-bold text-white truncate max-w-[240px]">
                   {value}
                 </span>
               </div>
@@ -291,70 +293,68 @@ export default function StocksPage() {
         </GlassCard>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2 mt-5">
+      <section className="grid gap-6 xl:grid-cols-2 mt-6">
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Technicals" title="Momentum Score & Stats" />
-          <div className="divide-y divide-white/10 rounded-lg border border-white/10 mt-4">
+          <SectionHeader eyebrow="Technicals" title="Health Indicators" />
+          <div className="grid grid-cols-2 gap-4 mt-6">
             {growwData?.stats ? (
               [
                 { label: "Market Cap", value: `₹${(growwData.stats.marketCap / 10000000).toFixed(2)} Cr` },
-                { label: "P/E Ratio", value: growwData.stats.peRatio },
-                { label: "P/B Ratio", value: growwData.stats.pbRatio },
-                { label: "Dividend Yield", value: `${growwData.stats.divYield}%` },
                 { label: "ROE", value: `${growwData.stats.roe}%` },
                 { label: "EPS (TTM)", value: `₹${growwData.stats.epsTtm}` },
-                { label: "Debt to Equity", value: growwData.stats.debtToEquity },
-                { label: "Current Ratio", value: growwData.stats.currentRatio },
+                { label: "Debt/Equity", value: growwData.stats.debtToEquity },
               ].map((metric) => (
-                <div key={metric.label} className="flex justify-between px-4 py-3 text-sm hover:bg-white/[0.02] transition">
-                  <span className="text-slate-400">{metric.label}</span>
-                  <span className="font-semibold text-white">{metric.value}</span>
+                <div key={metric.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <span className="block text-[10px] uppercase font-black text-slate-600 mb-1">{metric.label}</span>
+                  <span className="text-lg font-bold text-white">{metric.value}</span>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-sm text-slate-400 text-center">Loading stats...</div>
+              <div className="col-span-2 p-8 text-center text-slate-500">Loading metrics...</div>
             )}
           </div>
         </GlassCard>
 
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Fundamentals" title="Financial Health" />
-          <div className="divide-y divide-white/10 rounded-lg border border-white/10 mt-4">
+          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
+          <div className="mt-6 space-y-2">
             {growwData?.fundamentals ? (
-              growwData.fundamentals.map((metric) => (
-                <div key={metric.name} className="flex justify-between px-4 py-3 text-sm hover:bg-white/[0.02] transition">
-                  <span className="text-slate-400">{metric.name}</span>
-                  <span className="font-semibold text-white">{metric.value}</span>
+              growwData.fundamentals.slice(0, 5).map((metric) => (
+                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all">
+                  <span className="text-slate-500 font-medium">{metric.name}</span>
+                  <span className="font-mono font-bold text-white">{metric.value}</span>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-sm text-slate-400 text-center">Loading fundamentals...</div>
+              <div className="p-8 text-center text-slate-500">Loading fundamentals...</div>
             )}
           </div>
         </GlassCard>
       </section>
 
-      <GlassCard className="p-6">
-        <SectionHeader eyebrow="Live" title={`Events for ${stockName}`} />
-        <div className="thin-scrollbar flex gap-4 overflow-x-auto pb-2">
-          {keyEvents.map((event) => (
-            <div
-              key={event.title}
-              className="min-w-[320px] rounded-lg border border-ai/20 bg-ai/10 p-5 hover:scale-[1.02] transition"
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-ai text-white shadow-glow">
-                <LineChart size={18} />
+      <div className="mt-6">
+        <GlassCard className="p-8">
+          <SectionHeader eyebrow="Live" title={`Events & Corporate Actions`} />
+          <div className="thin-scrollbar flex gap-6 overflow-x-auto pb-4 mt-6">
+            {keyEvents.map((event) => (
+              <div
+                key={event.title}
+                className="min-w-[340px] rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-ai/40 transition-all hover:-translate-y-1"
+              >
+                <div className="h-10 w-10 rounded-xl bg-ai/20 flex items-center justify-center text-ai shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                  <LineChart size={20} />
+                </div>
+                <h3 className="mt-6 text-xl font-bold text-white">
+                  {event.title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                  {event.text}
+                </p>
               </div>
-              <h3 className="mt-5 text-lg font-semibold leading-7 text-white">
-                {event.title}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                {event.text}
-              </p>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
+            ))}
+          </div>
+        </GlassCard>
+      </div>
     </AppShell>
   );
 }
