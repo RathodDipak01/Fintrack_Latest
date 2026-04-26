@@ -54,10 +54,10 @@ export default function StocksPage() {
 
   const stockName = growwData?.details?.fullName || quote?.name || "Company Details";
   const currencySymbol = quote?.currency === "INR" ? "₹" : quote?.currency === "USD" ? "$" : "₹";
-  const stockPrice = quote?.price ? `${currencySymbol}${quote.price.toLocaleString(quote?.currency === "INR" ? "en-IN" : "en-US")}` : "...";
-  const stockChangeRaw = quote?.changeRaw ? quote.changeRaw.toFixed(2) : "0.00";
-  const stockChangePct = quote?.changePercent ? quote.changePercent.toFixed(2) : "0.00";
-  const isUp = parseFloat(stockChangePct) >= 0;
+  const stockPrice = quote?.price ? `${currencySymbol}${quote.price.toLocaleString(quote?.currency === "INR" ? "en-IN" : "en-US")}` : "";
+  const stockChangeRaw = quote?.changeRaw ? quote.changeRaw.toFixed(2) : null;
+  const stockChangePct = quote?.changePercent ? quote.changePercent.toFixed(2) : null;
+  const isUp = stockChangePct ? parseFloat(stockChangePct) >= 0 : true;
 
   // Process Groww Shareholding
   const shKeys = growwData?.shareHoldingPattern ? Object.keys(growwData.shareHoldingPattern).reverse().slice(0, 6) : [];
@@ -97,8 +97,8 @@ export default function StocksPage() {
             <div>
               <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{quote?.exchange || "NSE"}: {symbol}</p>
               <h2 className="mt-1 text-3xl font-bold text-white flex items-center gap-3">
-                {stockPrice}
-                {!loading && (
+                {stockPrice || (loading ? "Loading..." : "")}
+                {!loading && stockChangePct && (
                   <span className={`text-lg font-semibold ${isUp ? "text-profit" : "text-loss"}`}>
                     {stockChangeRaw ? `${isUp ? "+" : ""}${stockChangeRaw} ` : ""}
                     ({isUp ? "+" : ""}{stockChangePct}%)
@@ -111,36 +111,10 @@ export default function StocksPage() {
                 </p>
               )}
             </div>
-            <div className="flex gap-3">
-              <button className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 hover:bg-white/10 hover:text-white transition-all shadow-sm">
-                <Plus size={20} />
-              </button>
-              <button className="rounded-xl border border-white/10 bg-white/5 p-3 text-slate-300 hover:bg-white/10 hover:text-white transition-all shadow-sm">
-                <Search size={20} />
-              </button>
-            </div>
           </div>
 
-          <div className="h-[600px] w-full rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0a]">
+          <div className="h-[600px] w-full rounded-2xl overflow-hidden border border-white/10 bg-[#0a0a0a] shadow-2xl">
             <TradingViewWidget symbol={formatTvSymbol(symbol)} />
-          </div>
-
-          <div className="thin-scrollbar mt-6 flex items-center justify-between gap-4 overflow-x-auto">
-            <div className="flex gap-2">
-              {["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"].map(
-                (range, index) => (
-                  <button
-                    key={range}
-                    className={`shrink-0 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all ${index === 0 ? "bg-white text-midnight shadow-lg scale-105" : "border border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"}`}
-                  >
-                    {range}
-                  </button>
-                ),
-              )}
-            </div>
-            <button className="shrink-0 rounded-lg border border-ai/30 bg-ai/10 px-6 py-2.5 text-sm font-bold text-ai hover:bg-ai hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-              Advanced Chart
-            </button>
           </div>
         </div>
       </GlassCard>
