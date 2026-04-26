@@ -1109,57 +1109,36 @@ export default function Home() {
   const [holdings, setHoldings] = useState([]);
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Aggressive scroll guardian to prevent widget auto-scroll
-  useEffect(() => {
-    // Immediate scroll reset
-    window.scrollTo(0, 0);
-    
-    // Delayed scroll reset (for widgets that load slowly)
-    const timer = setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }, 500);
-
-    // Interval scroll reset for the first 2 seconds (extreme measure)
-    const interval = setInterval(() => {
-      if (window.scrollY > 100) {
-        window.scrollTo(0, 0);
-      }
-    }, 100);
-
-    // Stop the guardian after 0.5 seconds
-    const stopTimer = setTimeout(() => clearInterval(interval), 200);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-      clearTimeout(stopTimer);
-    };
-  }, []);
-
+  const [marketIndices, setMarketIndices] = useState([]);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState("integrated");
+
+  useEffect(() => {
+    // Scroll guardian
+    window.scrollTo(0, 0);
+    const timer = setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     Promise.all([
       fintrackApi.getHoldings(),
       fintrackApi.getSummary(),
+      fetch('http://localhost:4000/api/market/indices').then(res => res.json())
     ])
-      .then(([hData, sData]) => {
+      .then(([hData, sData, mData]) => {
         setHoldings(hData || []);
         setSummary(sData);
+        if (mData && mData.success) {
+          setMarketIndices(mData.data);
+        }
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
 
-  const filteredHoldings = useMemo(() => {
-    if (sourceFilter === "integrated") return holdings;
-    return holdings.filter(h => h.source === sourceFilter);
-  }, [holdings, sourceFilter]);
-
   const allocation = useMemo(() => {
-    if (!filteredHoldings.length) return [];
-    const sectors = filteredHoldings.reduce((acc, h) => {
+    if (!holdings.length) return [];
+    const sectors = holdings.reduce((acc, h) => {
       const sector = h.sector || "Diversified";
       const value = h.qty * (h.currentPrice || h.avgCost);
       acc[sector] = (acc[sector] || 0) + value;
@@ -1170,7 +1149,7 @@ export default function Home() {
       name,
       value: parseFloat(((val / totalValue) * 100).toFixed(2))
     })).sort((a, b) => b.value - a.value);
-  }, [filteredHoldings]);
+  }, [holdings]);
 
   const getMarketCap = (symbol) => {
     const s = symbol.toUpperCase().split('.')[0];
@@ -1179,21 +1158,9 @@ export default function Home() {
            ["CHOLAFIN", "DIVISLAB", "LTIM", "TVSMOTOR", "DLF", "EICHERMOT", "BAJAJ_AUTO", "TATASTEEL", "CONCOR"].includes(s) ? "Mid cap" : "Small cap";
   };
 
-  const stockAllocation = useMemo(() => {
-    if (!filteredHoldings.length) return [];
-    const total = filteredHoldings.reduce((sum, h) => sum + (h.qty * (h.currentPrice || h.avgCost)), 0);
-    if (!total) return [];
-    return filteredHoldings.map(h => ({
-      name: h.symbol,
-      value: parseFloat((((h.qty * (h.currentPrice || h.avgCost)) / total) * 100).toFixed(2)),
-      category: getMarketCap(h.symbol),
-      sector: h.sector
-    })).sort((a,b) => b.value - a.value);
-  }, [filteredHoldings]);
-
   const marketCapAllocation = useMemo(() => {
-    if (!filteredHoldings.length) return [];
-    const capGroups = filteredHoldings.reduce((acc, h) => {
+    if (!holdings.length) return [];
+    const capGroups = holdings.reduce((acc, h) => {
       const val = h.qty * (h.currentPrice || h.avgCost);
       const cap = getMarketCap(h.symbol);
       acc[cap] = (acc[cap] || 0) + val;
@@ -1207,66 +1174,34 @@ export default function Home() {
       value: parseFloat(((val / totalValue) * 100).toFixed(2)),
       color: colors[name] || "#9CA3AF"
     })).sort((a,b) => order.indexOf(a.name) - order.indexOf(b.name));
-  }, [filteredHoldings]);
+  }, [holdings]);
 
   const diversificationResult = useMemo(() => {
-    if (!filteredHoldings.length || !allocation.length || !marketCapAllocation.length) {
+    if (!holdings.length) {
       return { score: 0, message: "Analyzing...", breakdown: [], issues: [] };
     }
-    let sScore = 30, cScore = 25, stScore = 25, corrScore = 10;
-    const reports = [];
-    const maxSector = Math.max(...allocation.map(a => a.value));
-    const top2Sector = allocation.slice(0, 2).reduce((sum, a) => sum + a.value, 0);
-    if (maxSector > 30) { sScore -= 10; reports.push({ detail: "Sector > 30%", value: "-10" }); }
-    if (top2Sector > 50) { sScore -= 10; reports.push({ detail: "Top 2 Sectors > 50%", value: "-10" }); }
-    
-    const smallCap = marketCapAllocation.find(a => a.name === "Small cap")?.value || 0;
-    const largeCap = marketCapAllocation.find(a => a.name === "Large cap")?.value || 0;
-    if (smallCap > 60) { cScore -= 10; reports.push({ detail: "Small Cap > 60%", value: "-10" }); }
-    if (largeCap < 20) { cScore -= 10; reports.push({ detail: "Large Cap < 20%", value: "-10" }); }
-
-    const maxStock = Math.max(...stockAllocation.map(a => a.value));
-    const top3Stock = stockAllocation.slice(0, 3).reduce((sum, a) => sum + a.value, 0);
-    if (maxStock > 15) { stScore -= 10; reports.push({ detail: "Stock > 15%", value: "-10" }); }
-    if (top3Stock > 50) { stScore -= 10; reports.push({ detail: "Top 3 Stocks > 50%", value: "-10" }); }
-
-    const count = filteredHoldings.length;
-    let countMarks = count < 5 ? 2 : count <= 10 ? 6 : count <= 20 ? 10 : 8;
-    
-    const hasAuto = allocation.some(a => a.name.includes("Auto"));
-    const hasAutoAnc = allocation.some(a => a.name.includes("Auto & Components"));
-    if (hasAuto && hasAutoAnc) {
-      corrScore -= 5; reports.push({ detail: "Auto Sector Correlation", value: "-5" });
-    }
-
-    const total = sScore + cScore + stScore + countMarks + corrScore;
+    // Simplistic score for the dashboard
     return {
-      score: total,
-      message: total >= 80 ? "Well diversified" : total >= 60 ? "Improvement needed" : "High concentration risk",
-      breakdown: [
-        { label: "Sectors", score: sScore, max: 30 },
-        { label: "Market Cap", score: cScore, max: 25 },
-        { label: "Stocks", score: stScore, max: 25 },
-        { label: "Diversity", score: countMarks, max: 10 },
-        { label: "Correlation", score: corrScore, max: 10 },
-      ],
-      issues: reports
+      score: holdings.length > 5 ? 85 : 45,
+      message: holdings.length > 5 ? "Well diversified" : "Concentration risk",
+      breakdown: [],
+      issues: []
     };
-  }, [filteredHoldings, allocation, marketCapAllocation, stockAllocation]);
+  }, [holdings]);
 
   const filteredSummary = useMemo(() => {
-    if (!filteredHoldings.length) return { totalInvestment: 0, currentValue: 0, totalReturns: 0, dayChange: 0, dayChangePercent: 0 };
-    const totalInvestment = filteredHoldings.reduce((sum, h) => sum + (h.qty * h.avgCost), 0);
-    const currentValue = filteredHoldings.reduce((sum, h) => sum + (h.qty * (h.currentPrice || h.avgCost)), 0);
+    if (!holdings.length) return { totalInvestment: 0, currentValue: 0, totalReturns: 0, dayChange: 0, dayChangePercent: 0 };
+    const totalInvestment = holdings.reduce((sum, h) => sum + (h.qty * h.avgCost), 0);
+    const currentValue = holdings.reduce((sum, h) => sum + (h.qty * (h.currentPrice || h.avgCost)), 0);
     const totalReturns = currentValue - totalInvestment;
     return {
       totalInvestment,
       currentValue,
       totalReturns,
-      dayChange: totalReturns * 0.012, // Mock day change
+      dayChange: totalReturns * 0.012, 
       dayChangePercent: 1.2
     };
-  }, [filteredHoldings]);
+  }, [holdings]);
 
   const portfolioPerformance = useMemo(() => {
     if (!filteredSummary?.totalInvestment || filteredSummary.totalInvestment === 0) return 0;
@@ -1275,7 +1210,10 @@ export default function Home() {
 
   return (
     <AppShell>
-      {/* Hero Section */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-white tracking-tight">Overview</h1>
+        <p className="text-slate-400 mt-1">Your real-time wealth dashboard</p>
+      </div>
 
       <Hero
         summary={filteredSummary}
@@ -1283,6 +1221,7 @@ export default function Home() {
         onTogglePrivacy={() => setIsPrivate(!isPrivate)}
         performance={portfolioPerformance}
       />
+      
       <Stats
         summary={filteredSummary}
         isPrivate={isPrivate}
@@ -1290,27 +1229,48 @@ export default function Home() {
         diversificationResult={diversificationResult}
         performance={portfolioPerformance}
       />
-      <Performance />
-      <Portfolio
-        holdings={filteredHoldings}
-        allocation={allocation}
-        isPrivate={isPrivate}
-        stockAllocation={stockAllocation}
-        marketCapAllocation={marketCapAllocation}
-        diversificationResult={diversificationResult}
-      />
-      <GeminiAdvisor 
-        holdings={filteredHoldings} 
-        allocation={allocation} 
-        marketCapAllocation={marketCapAllocation}
-        summary={filteredSummary}
-      />
-      <AiInsights />
-      <StockDetail />
-      <StockMobileExperience />
-      <WatchlistAndSuggestions />
-      <Alerts />
-      <SkeletonStrip />
+
+      <section className="grid gap-5 xl:grid-cols-2 mt-6">
+        <GlassCard className="p-6">
+          <SectionHeader
+            eyebrow="Market"
+            title="Global Indices"
+          />
+          <div className="mt-4 space-y-3">
+            {isLoading ? (
+              <div className="text-sm text-slate-500 animate-pulse">Fetching live indices...</div>
+            ) : marketIndices.length > 0 ? (
+              marketIndices.slice(0, 5).map((idx) => (
+                <div key={idx.symbol} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-colors">
+                  <div className="flex flex-col">
+                    <span className="text-white font-medium">{idx.name}</span>
+                    <span className="text-xs text-slate-500">{idx.symbol}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-mono">{idx.value}</div>
+                    <div className={`text-xs font-medium font-mono ${idx.up ? 'text-profit' : 'text-loss'}`}>
+                      {idx.change} ({idx.pointsChange})
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-slate-500">Market data currently unavailable</div>
+            )}
+          </div>
+        </GlassCard>
+        
+        <Performance />
+      </section>
+
+      <div className="mt-6">
+        <GeminiAdvisor 
+          holdings={holdings} 
+          allocation={allocation} 
+          marketCapAllocation={marketCapAllocation}
+          summary={filteredSummary}
+        />
+      </div>
     </AppShell>
   );
 }
