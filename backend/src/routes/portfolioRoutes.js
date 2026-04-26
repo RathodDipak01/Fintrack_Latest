@@ -50,22 +50,42 @@ portfolioRouter.get("/allocation", async (req, res) => {
     const holdings = await prisma.portfolioHolding.findMany({ where: { userId: req.userId } });
     const totalValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
     
-    if (totalValue === 0) return ok(res, []);
+    if (totalValue === 0) return ok(res, { sectors: [], marketCap: [] });
 
-    // Group by sector for industry analysis using fresh mapping
-    const grouped = holdings.reduce((acc, h) => {
+    // Group by sector
+    const sectorGroups = holdings.reduce((acc, h) => {
       const val = h.qty * (h.currentPrice || h.avgCost);
-      const sector = getSector(h.symbol) || "Diversified";
+      const sector = h.sector || "Diversified";
       acc[sector] = (acc[sector] || 0) + val;
       return acc;
     }, {});
 
-    const allocationList = Object.entries(grouped).map(([name, val]) => ({
+    // Group by market cap
+    const capGroups = holdings.reduce((acc, h) => {
+      const val = h.qty * (h.currentPrice || h.avgCost);
+      const mc = h.marketCap || 0;
+      let category = "Small cap";
+      if (mc > 2000000000000) category = "Large cap";
+      else if (mc > 50000000000) category = "Mid cap";
+      
+      acc[category] = (acc[category] || 0) + val;
+      return acc;
+    }, {});
+
+    const sectors = Object.entries(sectorGroups).map(([name, val]) => ({
       name,
       value: parseFloat(((val / totalValue) * 100).toFixed(2))
-    }));
+    })).sort((a, b) => b.value - a.value);
 
-    return ok(res, allocationList);
+    const marketCap = Object.entries(capGroups).map(([name, val]) => ({
+      name,
+      value: parseFloat(((val / totalValue) * 100).toFixed(2))
+    })).sort((a, b) => {
+      const order = ["Large cap", "Mid cap", "Small cap"];
+      return order.indexOf(a.name) - order.indexOf(b.name);
+    });
+
+    return ok(res, { sectors, marketCap });
   } catch (err) {
     console.error(err);
     return error(res, 500, "Error calculating allocation");
@@ -106,10 +126,8 @@ portfolioRouter.get("/holdings", async (req, res) => {
     
     // Add computed metrics and enrich sector on the fly
     const enrichedHoldings = userHoldings.map(h => {
-      const currentSector = h.sector === "Trading" || !h.sector ? getSector(h.symbol) : h.sector;
       return {
         ...h,
-        sector: currentSector,
         changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
         pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
       };

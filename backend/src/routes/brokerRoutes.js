@@ -10,13 +10,28 @@ import { ok, error } from "../utils/apiResponse.js";
 
 const router = express.Router();
 
-/**
- * Helper to perform the database sync (delete specific source, insert new)
- */
 async function performDatabaseSync(userId, holdings, source) {
   if (!holdings || !Array.isArray(holdings)) {
     throw new Error(`Invalid holdings received for ${source}`);
   }
+
+  const { getStockProfile } = await import("../services/marketData.js");
+
+  // Enrich holdings with live sector and market cap data
+  const enrichedHoldings = await Promise.all(holdings.map(async (h) => {
+    // Yahoo Finance usually needs .NS for NSE stocks
+    const ticker = h.symbol.includes('.') ? h.symbol : `${h.symbol}.NS`;
+    const profile = await getStockProfile(ticker);
+    
+    return {
+      ...h,
+      sector: profile?.sector || h.sector || "Diversified",
+      industry: profile?.industry || "General",
+      marketCap: profile?.marketCap || 0,
+      userId,
+      source: source
+    };
+  }));
 
   // Only delete holdings from THIS specific source to allow combining multiple brokers
   return await prisma.$transaction([
@@ -27,12 +42,7 @@ async function performDatabaseSync(userId, holdings, source) {
       } 
     }),
     prisma.portfolioHolding.createMany({
-      data: holdings.map((h) => ({
-        ...h,
-        sector: getSector(h.symbol),
-        userId,
-        source: source
-      })),
+      data: enrichedHoldings,
     }),
   ]);
 }

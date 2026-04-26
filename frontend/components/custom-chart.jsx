@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries } from 'lightweight-charts';
 import { fintrackApi } from '@/lib/api';
 
 export default function CustomChart({ symbol = "TCS", theme = "dark" }) {
@@ -43,9 +43,9 @@ export default function CustomChart({ symbol = "TCS", theme = "dark" }) {
       height: 400,
     });
 
-    // Use addCandlestickSeries if it exists, otherwise log error
-    if (typeof chart.addCandlestickSeries === 'function') {
-      const candlestickSeries = chart.addCandlestickSeries({
+    // Use addSeries(CandlestickSeries) for v5+
+    try {
+      const candlestickSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderVisible: false,
@@ -54,8 +54,8 @@ export default function CustomChart({ symbol = "TCS", theme = "dark" }) {
       });
       candlestickSeries.setData(data);
       chart.timeScale().fitContent();
-    } else {
-      console.error("chart.addCandlestickSeries is not a function. Available methods:", Object.keys(chart));
+    } catch (e) {
+      console.error("Failed to add Candlestick series", e);
     }
 
     const handleResize = () => {

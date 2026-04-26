@@ -25,6 +25,7 @@ function LivingDashboard() {
     returns: 123456,
     gain: 5678
   });
+  const [aiStrategy, setAiStrategy] = useState("Analyzing market trends and latest news...");
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -34,6 +35,17 @@ function LivingDashboard() {
         gain: prev.gain + (Math.random() * 2 - 1)
       }));
     }, 2000);
+
+    // Fetch dynamic AI strategy
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/ai/market-strategy`)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.data?.strategy) {
+          setAiStrategy(data.data.strategy.replace("STRATEGY: ", ""));
+        }
+      })
+      .catch(err => console.error("Strategy fetch error:", err));
+
     return () => clearInterval(interval);
   }, []);
 
@@ -124,15 +136,15 @@ function LivingDashboard() {
         </div>
       </div>
 
-      {/* Bottom Alert Mock */}
+      {/* Bottom Alert Dynamic */}
       <motion.div 
-        animate={{ opacity: [1, 0.5, 1] }}
-        transition={{ duration: 2, repeat: Infinity }}
+        animate={{ opacity: [1, 0.7, 1] }}
+        transition={{ duration: 3, repeat: Infinity }}
         className="mt-6 p-3 rounded-xl bg-ai/5 border border-ai/20 flex items-center gap-3"
       >
-        <Sparkles size={14} className="text-ai" />
+        <Sparkles size={14} className="text-ai shrink-0" />
         <p className="text-[10px] font-medium text-slate-300">
-          <span className="text-ai font-bold">AI STRATEGY:</span> HDFC Bank earnings report expected tomorrow. Rebalancing recommended for IT sector exposure.
+          <span className="text-ai font-bold">AI STRATEGY:</span> {aiStrategy}
         </p>
       </motion.div>
 

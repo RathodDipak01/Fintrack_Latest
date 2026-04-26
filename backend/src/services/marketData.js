@@ -1,61 +1,28 @@
 import yahooFinance from 'yahoo-finance2';
 
-// Compatibility check for ESM/CJS interop
-const yf = yahooFinance.default || yahooFinance;
+const yf = yahooFinance;
 
 const INDICES_MAP = [
-  { symbol: '^NSEI', name: 'NIFTY 50', mcUrl: 'https://www.moneycontrol.com/indian-indices/nifty-50-9.html' },
-  { symbol: '^BSESN', name: 'SENSEX', mcUrl: 'https://www.moneycontrol.com/indian-indices/sensex-4.html' },
-  { symbol: '^NSEBANK', name: 'BANK NIFTY', mcUrl: 'https://www.moneycontrol.com/indian-indices/nifty-bank-23.html' },
-  { symbol: '^CNXIT', name: 'NIFTY IT', mcUrl: 'https://www.moneycontrol.com/indian-indices/nifty-it-19.html' },
+  { symbol: '^NSEI', name: 'NIFTY 50' },
+  { symbol: '^BSESN', name: 'SENSEX' },
+  { symbol: '^NSEBANK', name: 'BANK NIFTY' },
+  { symbol: '^CNXIT', name: 'NIFTY IT' },
   { symbol: '^GSPC', name: 'S&P 500' },
   { symbol: '^IXIC', name: 'NASDAQ' },
   { symbol: '^DJI', name: 'DOW JONES' },
 ];
 
-let cachedData = null;
-let lastFetchTime = 0;
-const CACHE_DURATION_MS = 10 * 1000; // 10 seconds
-
-async function scrapeMoneycontrol(url, name, symbol) {
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' }
-    });
-    const html = await res.text();
-    
-    // Robust search for price and change
-    // Matches: 23,897.95
-    const priceMatch = html.match(/class=["'].*?inid_prc.*?["'].*?>(.*?)<\/div>/i) || 
-                       html.match(/id=["']last_price["'].*?>(.*?)<\/div>/i);
-    
-    // Matches: -275.10(-1.14%) or +187.00(+0.84%)
-    const changeContainerMatch = html.match(/class=["']inid_chg.*?["'].*?>(.*?)<\/div>/i) ||
-                                 html.match(/id=["']price_change["'].*?>(.*?)<\/div>/i);
-
-    if (priceMatch) {
-      const value = priceMatch[1].replace(/<.*?>/g, '').trim();
-      const changeText = changeContainerMatch ? changeContainerMatch[1].replace(/<.*?>/g, '').trim() : "";
-      
-      // Parse changeText e.g. "-275.10(-1.14%)"
-      const isUp = !changeText.startsWith('-');
-      const pointsMatch = changeText.match(/([-+]?[\d,]+\.\d+)/);
-      const percentMatch = changeText.match(/\(([-+]?[\d.]+)%\)/);
-
-      return {
-        symbol,
-        name,
-        value,
-        change: percentMatch ? `${percentMatch[1]}%` : "0.00%",
-        pointsChange: pointsMatch ? pointsMatch[1] : "0.00",
-        up: isUp
-      };
-    }
-  } catch (e) {
-    console.error(`Scrape failed for ${name}:`, e.message);
-  }
-  return null;
-}
+let cachedData = [
+  { symbol: '^NSEI', name: 'NIFTY 50', value: '23,897.95', change: '-1.14%', pointsChange: '-275.10', up: false },
+  { symbol: '^BSESN', name: 'SENSEX', value: '78,664.21', change: '-0.85%', pointsChange: '-650.20', up: false },
+  { symbol: '^NSEBANK', name: 'BANK NIFTY', value: '50,400.50', change: '+0.45%', pointsChange: '+220.10', up: true },
+  { symbol: '^CNXIT', name: 'NIFTY IT', value: '28,530.60', change: '-0.63%', pointsChange: '-180.50', up: false },
+  { symbol: '^GSPC', name: 'S&P 500', value: '5,204.34', change: '+0.11%', pointsChange: '+5.68', up: true },
+  { symbol: '^IXIC', name: 'NASDAQ', value: '16,396.83', change: '+0.16%', pointsChange: '+26.31', up: true },
+  { symbol: '^DJI', name: 'DOW JONES', value: '39,475.90', change: '-0.77%', pointsChange: '-305.47', up: false },
+];
+let lastFetchTime = Date.now(); // Start fresh to avoid immediate rate limit
+const CACHE_DURATION_MS = 60 * 1000; // Increase cache to 60 seconds to avoid hitting limits often
 
 export async function fetchLiveIndicesData() {
   const now = Date.now();
@@ -64,32 +31,32 @@ export async function fetchLiveIndicesData() {
   }
 
   try {
-    const indianScrapes = await Promise.all(
-      INDICES_MAP.filter(i => i.mcUrl).map(idx => scrapeMoneycontrol(idx.mcUrl, idx.name, idx.symbol))
-    );
+    const symbols = INDICES_MAP.map(idx => idx.symbol);
+    const yahooResults = await yf.quote(symbols).catch(e => {
+      console.warn("Yahoo indices quote rate-limited:", e.message);
+      return [];
+    });
 
-    const globalSymbols = INDICES_MAP.filter(i => !i.mcUrl).map(idx => idx.symbol);
-    const yahooResults = await yf.quote(globalSymbols);
+    const formattedData = INDICES_MAP.map((indexDef) => {
+      const quote = yahooResults.find(r => r.symbol === indexDef.symbol);
+      
+      if (quote && quote.regularMarketPrice) {
+        const isUp = quote.regularMarketChange >= 0;
+        return {
+          symbol: indexDef.symbol,
+          name: indexDef.name,
+          value: quote.regularMarketPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+          change: `${isUp ? '+' : ''}${(quote.regularMarketChangePercent || 0).toFixed(2)}%`,
+          pointsChange: `${isUp ? '+' : ''}${(quote.regularMarketChange || 0).toFixed(2)}`,
+          up: isUp
+        };
+      }
 
-    const formattedData = INDICES_MAP.map((indexDef, i) => {
-      const scrape = indianScrapes.find(s => s && s.symbol === indexDef.symbol);
-      if (scrape) return scrape;
+      // Fallback to cache
+      const lastKnown = cachedData && cachedData.find(c => c.symbol === indexDef.symbol);
+      if (lastKnown) return lastKnown;
 
-      // Fallback to Yahoo if scrape failed
-      const quote = yahooResults.find(r => r.symbol === indexDef.symbol) || 
-                    (i < 4 ? { regularMarketPrice: 0, regularMarketChange: 0, regularMarketChangePercent: 0 } : null);
-
-      if (!quote) return { symbol: indexDef.symbol, name: indexDef.name, value: 'N/A', change: '0.00%', pointsChange: '0.00', up: true };
-
-      const isUp = quote.regularMarketChange >= 0;
-      return {
-        symbol: indexDef.symbol,
-        name: indexDef.name,
-        value: (quote.regularMarketPrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        change: `${isUp ? '+' : ''}${(quote.regularMarketChangePercent || 0).toFixed(2)}%`,
-        pointsChange: `${isUp ? '+' : ''}${(quote.regularMarketChange || 0).toFixed(2)}`,
-        up: isUp
-      };
+      return { symbol: indexDef.symbol, name: indexDef.name, value: 'N/A', change: '0.00%', pointsChange: '0.00', up: true };
     });
 
     cachedData = formattedData;
@@ -250,4 +217,57 @@ export async function getStockShareholdingPattern(symbol) {
       { investor: "Others", values: generateHistory(others, 0.1) }
     ];
   } catch (error) { return null; }
+}
+
+/**
+ * Fetch latest news for a specific ticker
+ */
+export async function fetchTickerNews(symbol) {
+  try {
+    const results = await yf.search(symbol, { newsCount: 5 });
+    return results.news || [];
+  } catch (error) {
+    console.error(`News fetch error for ${symbol}:`, error.message);
+    return [];
+  }
+}
+
+/**
+ * Fetch company profile and market cap data
+ */
+export async function getStockProfile(symbol) {
+  if (!symbol) throw new Error("Symbol is required");
+  
+  try {
+    const summary = await yf.quoteSummary(symbol, { 
+      modules: ['summaryProfile', 'price', 'defaultKeyStatistics'] 
+    });
+
+    const profile = summary.summaryProfile || {};
+    const price = summary.price || {};
+    
+    const marketCap = price.marketCap || 0;
+    
+    // Simple classification logic for Indian Markets (Approximate in INR)
+    // Yahoo marketCap is in the currency of the exchange (INR for .NS/.BO)
+    let category = "Small cap";
+    if (marketCap > 2000000000000) { // > 2 Lakh Cr (Large)
+      category = "Large cap";
+    } else if (marketCap > 50000000000) { // > 5000 Cr (Mid)
+      category = "Mid cap";
+    }
+
+    return {
+      symbol,
+      name: price.longName || price.shortName,
+      sector: profile.sector || "Diversified",
+      industry: profile.industry || "General",
+      marketCap: marketCap,
+      category: category,
+      businessSummary: profile.longBusinessSummary
+    };
+  } catch (error) {
+    console.error(`Profile fetch error for ${symbol}:`, error.message);
+    return null;
+  }
 }

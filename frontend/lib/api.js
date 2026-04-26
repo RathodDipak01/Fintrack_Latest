@@ -128,4 +128,8 @@ export const fintrackApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  getAiSignal: (symbol) => 
+    fetchWithAuth(`/ai/signal/${encodeURIComponent(symbol)}`, { method: "GET" }),
+  getSavedSignals: () =>
+    fetchWithAuth("/ai/signals", { method: "GET" }),
 };

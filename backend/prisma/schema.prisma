@@ -22,6 +22,7 @@ model User {
   updatedAt    DateTime           @updatedAt
   holdings     PortfolioHolding[]
   watchlist    Watchlist[]
+  signals      StockSignal[]
 }
 
 model PortfolioHolding {
@@ -35,6 +36,8 @@ model PortfolioHolding {
   productType  String?
   currentPrice Float?
   sector       String?
+  industry     String?
+  marketCap    Float?
   source       String   @default("CSV")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -49,3 +52,13 @@ model Watchlist {
   createdAt DateTime @default(now())
 }
 
+model StockSignal {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  symbol     String
+  signal     String
+  confidence Int
+  note       String
+  createdAt  DateTime @default(now())
+}

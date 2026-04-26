@@ -49,4 +49,17 @@ router.get('/history', async (req, res) => {
   }
 });
 
+router.get('/profile', async (req, res) => {
+  try {
+    const { getStockProfile } = await import('../services/marketData.js');
+    const symbol = req.query.symbol;
+    if (!symbol) return res.status(400).json({ success: false, error: 'Symbol parameter is required' });
+    const profile = await getStockProfile(symbol);
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    console.error('Error fetching stock profile:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch stock profile', details: String(error) });
+  }
+});
+
 export default router;

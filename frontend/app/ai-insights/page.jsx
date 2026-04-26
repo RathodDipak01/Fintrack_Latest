@@ -1,22 +1,46 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { BrainCircuit, ShieldAlert, Sparkles } from "lucide-react";
+import { BrainCircuit, ShieldAlert, Sparkles, Search, Loader2 } from "lucide-react";
 import { ForecastChart } from "@/components/charts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader } from "@/components/ui";
-import { alerts, holdings, stockSignals } from "@/lib/portfolio-data";
+import { alerts, holdings } from "@/lib/portfolio-data";
 import { GeminiAdvisor } from "@/components/ai-advisor";
 import { fintrackApi } from "@/lib/api";
 
 export default function AiInsightsPage() {
   const [portfolioSummary, setPortfolioSummary] = useState(null);
   const [liveHoldings, setLiveHoldings] = useState([]);
+  const [signals, setSignals] = useState([]);
+  const [newSymbol, setNewSymbol] = useState("");
+  const [isLoadingSignal, setIsLoadingSignal] = useState(false);
 
   useEffect(() => {
     fintrackApi.getSummary().then(setPortfolioSummary).catch(() => null);
     fintrackApi.getHoldings().then(setLiveHoldings).catch(() => null);
+    fintrackApi.getSavedSignals().then(setSignals).catch(() => null);
   }, []);
+
+  const handleAddSignal = async () => {
+    if (!newSymbol) return;
+    setIsLoadingSignal(true);
+    try {
+      const data = await fintrackApi.getAiSignal(newSymbol);
+      if (data) {
+        setSignals(prev => {
+          const filtered = prev.filter(s => s.symbol !== data.symbol);
+          return [data, ...filtered];
+        });
+        setNewSymbol("");
+      }
+    } catch (error) {
+      console.error("Failed to fetch signal", error);
+      alert(error.message || "Failed to generate signal. Check if the symbol is valid.");
+    } finally {
+      setIsLoadingSignal(false);
+    }
+  };
 
   const displayHoldings = liveHoldings.length > 0 ? liveHoldings : holdings;
 
@@ -108,21 +132,51 @@ export default function AiInsightsPage() {
           eyebrow="Signals"
           title="Recommendation stance and confidence"
         />
+        
+        <div className="mb-6 flex items-center gap-3">
+          <div className="relative max-w-sm w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+            <input 
+              type="text" 
+              placeholder="Enter stock symbol (e.g. TCS)"
+              value={newSymbol}
+              onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+              className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-ai focus:outline-none focus:ring-1 focus:ring-ai uppercase"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newSymbol) handleAddSignal();
+              }}
+            />
+          </div>
+          <button 
+            onClick={handleAddSignal}
+            disabled={!newSymbol || isLoadingSignal}
+            className="flex items-center gap-2 rounded-md bg-ai px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-ai/80 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoadingSignal ? <Loader2 size={16} className="animate-spin" /> : "Get Signal"}
+          </button>
+        </div>
+
+        {signals.length === 0 && !isLoadingSignal && (
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-8 text-center text-slate-500 text-sm">
+            Enter a stock symbol above to generate a real-time AI signal based on latest news.
+          </div>
+        )}
+
         <div className="grid gap-4 md:grid-cols-3">
-          {stockSignals.map((signal) => (
+          {signals.map((signal) => (
             <div
               key={signal.symbol}
-              className="rounded-lg border border-white/10 bg-white/[0.035] p-4"
+              className="rounded-lg border border-white/10 bg-white/[0.035] p-4 relative overflow-hidden"
             >
               <div className="flex items-center justify-between">
                 <strong className="text-white">{signal.symbol}</strong>
-                <Pill tone={signal.signal === "Bearish" ? "loss" : "profit"}>
+                <Pill tone={signal.signal === "Bearish" ? "loss" : signal.signal === "Neutral" ? "warn" : "profit"}>
                   {signal.signal}
                 </Pill>
               </div>
               <div className="mt-5 h-2 rounded-full bg-white/10">
                 <div
-                  className="h-full rounded-full bg-ai"
+                  className={`h-full rounded-full ${signal.signal === "Bearish" ? "bg-loss" : signal.signal === "Neutral" ? "bg-warn" : "bg-profit"}`}
                   style={{ width: `${signal.confidence}%` }}
                 />
               </div>

@@ -67,3 +67,107 @@ STRICT STYLE: Short points. No fluff. Keyword-heavy. Disciplined tone.
     };
   }
 }
+
+export async function generateMarketStrategy(newsItems) {
+  if (!env.GEMINI_API_KEY) {
+    return "MARKET UPDATE: Global markets showing mixed signals. Connect your API key for deep AI strategy.";
+  }
+
+  const newsContext = newsItems.map(n => `- ${n.title} (${n.publisher})`).join("\n");
+  
+  const prompt = `
+Act as a Senior Market Strategist. Analyze these recent news headlines and provide a SINGLE-SENTENCE tactical advice for a retail investor.
+
+NEWS:
+${newsContext}
+
+REQUIREMENTS:
+- Maximum 20 words.
+- Format: "STRATEGY: [Your advice]"
+- Be specific (e.g., Mention a sector or a sentiment).
+- Professional and action-oriented.
+`;
+
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 100 }
+      })
+    });
+
+    const data = await response.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "STRATEGY: Markets volatile; maintain stop-losses and focus on blue-chip stability.";
+  } catch (error) {
+    console.error("Gemini Strategy Error:", error);
+    return "STRATEGY: Monitor indices for key support levels; stay defensive in high-beta sectors.";
+  }
+}
+
+export async function generateStockSignal(symbol, newsItems) {
+  if (!env.GEMINI_API_KEY) {
+    return {
+      symbol,
+      signal: "Neutral",
+      confidence: 50,
+      note: "API Key missing. Cannot generate real-time AI signal."
+    };
+  }
+
+  const newsContext = newsItems.length > 0 ? newsItems.map(n => `- ${n.title}`).join("\n") : "No recent news available.";
+  
+  const prompt = `
+Act as an expert quantitative stock analyst. Analyze the following recent news for the stock ticker '${symbol}' and provide a recommendation signal.
+
+RECENT NEWS:
+${newsContext}
+
+OUTPUT REQUIREMENTS:
+Provide ONLY a valid JSON object with the following exact keys, no markdown formatting, no code blocks:
+{
+  "signal": "Bullish" | "Bearish" | "Neutral",
+  "confidence": <integer between 0 and 100>,
+  "note": "<A single short sentence explaining the reasoning based on the news>"
+}
+`;
+
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 150 }
+      })
+    });
+
+    const data = await response.json();
+    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    // Remove markdown code blocks if any
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    try {
+      const parsed = JSON.parse(text);
+      return {
+        symbol,
+        signal: parsed.signal || "Neutral",
+        confidence: parsed.confidence || 50,
+        note: parsed.note || "Analysis completed with neutral bias."
+      };
+    } catch (e) {
+      console.error("Failed to parse Gemini signal JSON:", text);
+      return { symbol, signal: "Neutral", confidence: 50, note: "AI returned unparseable format." };
+    }
+  } catch (error) {
+    console.error(`Gemini Signal Error for ${symbol}:`, error);
+    return { symbol, signal: "Neutral", confidence: 50, note: "Error communicating with AI engine." };
+  }
+}

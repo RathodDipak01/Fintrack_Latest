@@ -242,24 +242,22 @@ export default function PortfolioPage() {
     });
   }, [aggregatedHoldings, sortField, sortDirection, selectedSector]);
 
-  const getMarketCap = (symbol) => {
-    const s = symbol.toUpperCase().split('.')[0];
-    const largeCaps = ["ADANIENT", "ADANIGREEN", "TCS", "HDFCBANK", "RELIANCE", "INFY", "ICICIBANK", "SBIN", "BHARTIARTL", "ITC", "LT", "BAJFINANCE", "MARUTI", "SUNPHARMA", "KOTAKBANK", "AXISBANK", "ONGC", "NTPC", "TATAMOTORS", "POWERGRID", "ASIANPAINT", "HCLTECH"];
-    if (largeCaps.includes(s)) return "Large cap";
-    const midCaps = ["CHOLAFIN", "DIVISLAB", "LTIM", "TVSMOTOR", "DLF", "EICHERMOT", "BAJAJ_AUTO", "TATASTEEL", "CONCOR"];
-    if (midCaps.includes(s)) return "Mid cap";
+  const getMarketCapCategory = (mc) => {
+    if (!mc || mc === 0) return "Small cap";
+    if (mc > 2000000000000) return "Large cap";
+    if (mc > 50000000000) return "Mid cap";
     return "Small cap";
   };
 
   const stockAllocation = useMemo(() => {
     if (!aggregatedHoldings || aggregatedHoldings.length === 0) return [];
-    const total = aggregatedHoldings.reduce((sum, h) => sum + (h.qty * (h.currentPrice || h.avg)), 0);
+    const total = aggregatedHoldings.reduce((sum, h) => sum + (h.qty * (h.price || h.avg)), 0);
     if (total === 0) return [];
     const mapped = aggregatedHoldings.map(h => ({
       name: h.symbol,
-      value: parseFloat((((h.qty * (h.currentPrice || h.avg)) / total) * 100).toFixed(2)),
-      category: getMarketCap(h.symbol),
-      sector: h.sector
+      value: parseFloat((((h.qty * (h.price || h.avg)) / total) * 100).toFixed(2)),
+      category: getMarketCapCategory(h.marketCap),
+      sector: h.sector || "Diversified"
     }));
     return mapped.sort((a,b) => b.value - a.value);
   }, [aggregatedHoldings]);
@@ -267,8 +265,8 @@ export default function PortfolioPage() {
   const marketCapAllocation = useMemo(() => {
     if (!aggregatedHoldings || aggregatedHoldings.length === 0) return [];
     const capGroups = aggregatedHoldings.reduce((acc, h) => {
-      const val = h.qty * (h.currentPrice || h.avg);
-      const cap = getMarketCap(h.symbol);
+      const val = h.qty * (h.price || h.avg);
+      const cap = getMarketCapCategory(h.marketCap);
       acc[cap] = (acc[cap] || 0) + val;
       return acc;
     }, {});
@@ -279,13 +277,11 @@ export default function PortfolioPage() {
     const order = ["Large cap", "Mid cap", "Small cap"];
     const colors = { "Large cap": "#4F46E5", "Mid cap": "#818CF8", "Small cap": "#C7D2FE" };
     
-    return Object.entries(capGroups)
-      .map(([name, val]) => ({
-        name,
-        value: parseFloat(((val / total) * 100).toFixed(2)),
-        color: colors[name] || "#9CA3AF"
-      }))
-      .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+    return order.map(name => ({
+      name,
+      value: parseFloat((( (capGroups[name] || 0) / total) * 100).toFixed(2)),
+      color: colors[name] || "#9CA3AF"
+    })).filter(a => a.value > 0);
   }, [aggregatedHoldings]);
 
   const COLORS = ['#3B82F6', '#22C55E', '#EAB308', '#EF4444', '#A855F7', '#F97316', '#06B6D4', '#EC4899', '#8B5CF6', '#14B8A6'];
