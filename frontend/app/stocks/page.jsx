@@ -28,6 +28,7 @@ export default function StocksPage() {
   const [shareholding, setShareholding] = useState(null);
   const [growwData, setGrowwData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [expandedSummary, setExpandedSummary] = useState(false);
 
   useEffect(() => {
     async function fetchQuote() {
@@ -313,9 +314,10 @@ export default function StocksPage() {
         </div>
       </GlassCard>
 
-      <section className="grid gap-6 xl:grid-cols-2">
-        <GlassCard className="p-6">
-          <SectionHeader eyebrow="Shareholding" title="Ownership structure" />
+      {/* Ownership & Entity Row */}
+      <section className="grid gap-6 xl:grid-cols-3 mb-6">
+        <GlassCard className="p-6 xl:col-span-2">
+          <SectionHeader eyebrow="Ownership" title="Shareholding Structure" />
           <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="border-b border-white/10 bg-white/5 text-slate-400">
@@ -323,10 +325,7 @@ export default function StocksPage() {
                   <th className="px-5 py-4 font-bold uppercase tracking-tighter text-[10px]">Investor</th>
                   {(shKeys.length > 0 ? shKeys : ["'26", "'25", "'24", "'23", "'22", "'21"]).map(
                     (year, idx) => (
-                      <th
-                        key={year}
-                        className={`px-4 py-4 font-bold text-right ${idx === 0 ? "text-ai" : ""}`}
-                      >
+                      <th key={year} className={`px-4 py-4 font-bold text-right ${idx === 0 ? "text-ai" : ""}`}>
                         {year}
                       </th>
                     ),
@@ -340,10 +339,7 @@ export default function StocksPage() {
                       {row.investor}
                     </td>
                     {row.values.map((val, idx) => (
-                      <td
-                        key={idx}
-                        className={`px-4 py-4 text-right font-mono whitespace-nowrap ${idx === 0 ? "text-white font-bold" : "text-slate-500"}`}
-                      >
+                      <td key={idx} className={`px-4 py-4 text-right font-mono whitespace-nowrap ${idx === 0 ? "text-white font-bold" : "text-slate-500"}`}>
                         {val}%
                       </td>
                     ))}
@@ -354,67 +350,98 @@ export default function StocksPage() {
           </div>
         </GlassCard>
 
-        <GlassCard className="p-6">
-          <SectionHeader eyebrow="Company" title="Entity Profile" />
-          <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/5">
-            <p className="text-sm leading-7 text-slate-400 italic">
-              "{growwData?.details?.businessSummary || `${stockName} (${symbol}) is a prominent entity listed on the ${quote?.exchange || "NSE"}.`}"
-            </p>
-          </div>
-          <div className="mt-6 space-y-1">
+        <GlassCard className="p-6 flex flex-col">
+          <SectionHeader eyebrow="Profile" title="Entity Details" />
+          <div className="mt-6 space-y-1 flex-1">
             {[
-              ["Organization", stockName],
               ["CEO", growwData?.details?.ceo || "N/A"],
               ["Founded", growwData?.details?.foundedYear || "N/A"],
-              ["Headquarters", growwData?.details?.headquarters || "N/A"],
+              ["HQ", growwData?.details?.headquarters || "N/A"],
               ["Industry", growwData?.header?.industryName || quote?.sector || "Equity"],
+              ["Mkt Cap", growwData?.stats?.marketCap ? `₹${growwData.stats.marketCap.toLocaleString('en-IN')} Cr` : "N/A"],
+              ["Rank", growwData?.stats?.marketCapRank ? `#${growwData.stats.marketCapRank}` : "N/A"],
             ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex justify-between items-center px-4 py-4 text-sm rounded-lg hover:bg-white/[0.04] transition-all"
-              >
+              <div key={label} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
                 <span className="text-slate-500 font-medium">{label}</span>
-                <span className="text-right font-bold text-white truncate max-w-[240px]">
-                  {value}
-                </span>
+                <span className="text-right font-bold text-white truncate max-w-[150px]">{value}</span>
               </div>
             ))}
+          </div>
+          <div 
+            className="mt-6 p-4 rounded-xl bg-ai/5 border border-ai/10 cursor-pointer hover:bg-ai/10 transition-all group"
+            onClick={() => setExpandedSummary(!expandedSummary)}
+          >
+            <p className={`text-[11px] leading-relaxed text-slate-400 italic transition-all duration-500 ${expandedSummary ? "" : "line-clamp-4"}`}>
+              "{growwData?.details?.businessSummary || "No detailed business summary available for this entity."}"
+            </p>
+            <div className="mt-2 text-[9px] font-black text-ai uppercase tracking-widest flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {expandedSummary ? "Click to Collapse" : "Click to Read More"} <Search size={8} />
+            </div>
           </div>
         </GlassCard>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2 mt-6">
-        <GlassCard className="p-6">
-          <SectionHeader eyebrow="Technicals" title="Health Indicators" />
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            {growwData?.stats ? (
-              [
-                { label: "Market Cap", value: `₹${growwData.stats.marketCap.toLocaleString('en-IN')} Cr` },
-                { label: "ROE", value: `${growwData.stats.roe}%` },
-                { label: "EPS (TTM)", value: `₹${growwData.stats.epsTtm}` },
-                { label: "Debt/Equity", value: growwData.stats.debtToEquity },
-                { label: "Current Ratio", value: growwData.stats.currentRatio },
-                { label: "Book Value", value: `₹${growwData.stats.bookValue}` },
-              ].map((metric) => (
-                <div key={metric.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
-                  <span className="block text-[10px] uppercase font-black text-slate-600 mb-1">{metric.label}</span>
-                  <span className="text-lg font-bold text-white">{metric.value}</span>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-2 p-8 text-center text-slate-500">Loading metrics...</div>
-            )}
-          </div>
-        </GlassCard>
+      {/* Intelligence & Technicals Row */}
+      <section className="grid gap-6 xl:grid-cols-3 mb-6 items-stretch">
+        {/* Left: Key Ratios (Merged with Technicals) */}
+        <div className="xl:col-span-2 grid gap-6 md:grid-cols-2 items-stretch">
+           <GlassCard className="p-6 h-full flex flex-col">
+             <SectionHeader eyebrow="Valuation" title="Pricing Intelligence" />
+             <div className="mt-6 space-y-4 flex-1">
+                {[
+                  { label: "P/E Ratio", value: growwData?.stats?.peRatio, industry: growwData?.stats?.industryPe },
+                  { label: "P/B Ratio", value: growwData?.stats?.pbRatio, industry: growwData?.stats?.sectorPb },
+                  { label: "EV/EBITDA", value: growwData?.stats?.evToEbitda, industry: "N/A" },
+                ].map((item) => (
+                  <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <span className="text-[10px] uppercase font-black text-slate-500">{item.label}</span>
+                        <div className="text-xl font-bold text-white mt-1">{item.value || "N/A"}</div>
+                      </div>
+                      {item.industry && item.industry !== "N/A" && (
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-slate-600">Industry Avg</span>
+                          <div className="text-sm font-bold text-ai">{typeof item.industry === 'number' ? item.industry.toFixed(2) : item.industry}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+             </div>
+           </GlassCard>
 
-        <GlassCard className="p-6">
-          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet & Key Metrics" />
-          <div className="mt-6 space-y-2 overflow-y-auto max-h-[350px] pr-2 thin-scrollbar">
+           <GlassCard className="p-6 h-full flex flex-col">
+             <SectionHeader eyebrow="Efficiency" title="Health Indicators" />
+             <div className="mt-6 grid grid-cols-2 gap-4 flex-1">
+                {[
+                  { label: "ROE", value: growwData?.stats?.roe ? `${Number(growwData.stats.roe).toFixed(2)}%` : null, tone: "profit" },
+                  { label: "ROCE", value: growwData?.fundamentals?.find(f => f.name.includes("ROCE"))?.value || (growwData?.stats?.sectorRoce ? `${Number(growwData.stats.sectorRoce).toFixed(2)}%` : null), tone: "ai" },
+                  { label: "Debt/Equity", value: typeof growwData?.stats?.debtToEquity === 'number' ? growwData.stats.debtToEquity.toFixed(2) : growwData?.stats?.debtToEquity, tone: "warn" },
+                  { label: "Current Ratio", value: typeof growwData?.stats?.currentRatio === 'number' ? growwData.stats.currentRatio.toFixed(2) : growwData?.stats?.currentRatio, tone: "ai" },
+                  { label: "EPS (TTM)", value: growwData?.stats?.epsTtm ? `₹${Number(growwData.stats.epsTtm).toFixed(2)}` : null, tone: "white" },
+                  { label: "Div Yield", value: growwData?.stats?.divYield ? `${Number(growwData.stats.divYield).toFixed(2)}%` : null, tone: "profit" },
+                ].map((item) => (
+                  <div key={item.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/20 transition-all flex flex-col justify-center">
+                    <span className="text-[10px] uppercase font-black text-slate-600">{item.label}</span>
+                    <div className={`text-lg font-bold mt-1 ${item.tone === 'profit' ? 'text-profit' : item.tone === 'ai' ? 'text-ai' : item.tone === 'warn' ? 'text-warn' : 'text-white'}`}>
+                      {item.value || "N/A"}
+                    </div>
+                  </div>
+                ))}
+             </div>
+           </GlassCard>
+        </div>
+
+        {/* Right: Balance Sheet (Scrollable) */}
+        <GlassCard className="p-6 h-full flex flex-col">
+          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
+          <div className="mt-6 space-y-2 overflow-y-auto thin-scrollbar pr-2" style={{ maxHeight: "400px" }}>
             {growwData?.fundamentals ? (
               growwData.fundamentals.map((metric) => (
-                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
+                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-xs rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
                   <span className="text-slate-500 font-medium">{metric.name}</span>
-                  <span className="font-mono font-bold text-white">{metric.value}</span>
+                  <span className="font-mono font-bold text-white text-right ml-4">{metric.value}</span>
                 </div>
               ))
             ) : (
