@@ -299,10 +299,12 @@ export default function StocksPage() {
           <div className="grid grid-cols-2 gap-4 mt-6">
             {growwData?.stats ? (
               [
-                { label: "Market Cap", value: `₹${(growwData.stats.marketCap / 10000000).toFixed(2)} Cr` },
+                { label: "Market Cap", value: `₹${growwData.stats.marketCap.toLocaleString('en-IN')} Cr` },
                 { label: "ROE", value: `${growwData.stats.roe}%` },
                 { label: "EPS (TTM)", value: `₹${growwData.stats.epsTtm}` },
                 { label: "Debt/Equity", value: growwData.stats.debtToEquity },
+                { label: "Current Ratio", value: growwData.stats.currentRatio },
+                { label: "Book Value", value: `₹${growwData.stats.bookValue}` },
               ].map((metric) => (
                 <div key={metric.label} className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
                   <span className="block text-[10px] uppercase font-black text-slate-600 mb-1">{metric.label}</span>
@@ -316,11 +318,11 @@ export default function StocksPage() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet" />
-          <div className="mt-6 space-y-2">
+          <SectionHeader eyebrow="Fundamentals" title="Balance Sheet & Key Metrics" />
+          <div className="mt-6 space-y-2 overflow-y-auto max-h-[350px] pr-2 thin-scrollbar">
             {growwData?.fundamentals ? (
-              growwData.fundamentals.slice(0, 5).map((metric) => (
-                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all">
+              growwData.fundamentals.map((metric) => (
+                <div key={metric.name} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
                   <span className="text-slate-500 font-medium">{metric.name}</span>
                   <span className="font-mono font-bold text-white">{metric.value}</span>
                 </div>
