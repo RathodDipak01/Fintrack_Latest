@@ -121,8 +121,8 @@ export default function StocksPage() {
             </div>
           </div>
 
-          <div className="h-[500px] w-full rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0a]">
-            <CustomChart symbol={symbol} />
+          <div className="h-[600px] w-full rounded-xl overflow-hidden border border-white/5 bg-[#0a0a0a]">
+            <TradingViewWidget symbol={formatTvSymbol(symbol)} />
           </div>
 
           <div className="thin-scrollbar mt-6 flex items-center justify-between gap-4 overflow-x-auto">
