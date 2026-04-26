@@ -3,7 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, LineChart, LogIn, Menu, Search } from "lucide-react";
+import { 
+  Bell, 
+  LineChart, 
+  LogIn, 
+  Menu, 
+  Search, 
+  LayoutDashboard, 
+  Wallet, 
+  FileUp, 
+  Cpu, 
+  TrendingUp, 
+  Eye, 
+  Lightbulb,
+  ChevronRight,
+  ShieldAlert
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { alerts } from "@/lib/portfolio-data";
@@ -12,18 +27,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { MarketTicker } from "@/components/market-ticker";
 import { StockSearchBar } from "@/components/stock-search-bar";
 import { fintrackApi, setAuthToken } from "@/lib/api";
-
 import { useSettings } from "@/context/settings-context";
 
 const nav = [
-  { label: "dashboard", href: "/dashboard" },
-  { label: "portfolio", href: "/portfolio" },
-  { label: "import_data", href: "/import" },
-  { label: "ai_insights", href: "/ai-insights" },
-  { label: "stocks", href: "/stocks" },
-  { label: "alerts", href: "/alerts" },
-  { label: "watchlist", href: "/watchlist" },
-  { label: "suggestions", href: "/suggestions" },
+  { label: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "portfolio", href: "/portfolio", icon: Wallet },
+  { label: "import_data", href: "/import", icon: FileUp },
+  { label: "ai_insights", href: "/ai-insights", icon: Cpu },
+  { label: "stocks", href: "/stocks", icon: TrendingUp },
+  { label: "alerts", href: "/alerts", icon: Bell },
+  { label: "watchlist", href: "/watchlist", icon: Eye },
+  { label: "suggestions", href: "/suggestions", icon: Lightbulb },
 ];
 
 
@@ -144,44 +158,78 @@ function Sidebar() {
   const { t } = useSettings();
 
   return (
-    <aside className="hidden w-60 shrink-0 lg:block xl:w-64">
-      <div className="sticky top-20 space-y-4 p-0">
-        <GlassCard className="p-4">
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-            {t("app_sections") || "App sections"}
-          </p>
-          <div className="mt-4 space-y-1">
-            {nav.map((item) => (
+    <aside className="hidden w-64 shrink-0 lg:block">
+      <div className="sticky top-24 space-y-6">
+        {/* Main Navigation */}
+        <div className="space-y-1">
+          {nav.map((item) => {
+            const active = pathname === item.href;
+            const Icon = item.icon;
+            return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-md px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white ${pathname === item.href ? "bg-ai/15 text-ai" : "text-slate-400"}`}
+                className={`group relative flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                  active 
+                    ? "bg-ai/10 text-ai shadow-[inset_0_0_20px_rgba(59,130,246,0.05)]" 
+                    : "text-slate-400 hover:bg-white/[0.03] hover:text-white"
+                }`}
               >
-                {t(item.label)}
+                <div className="flex items-center gap-3">
+                  <div className={`transition-colors duration-300 ${active ? "text-ai" : "text-slate-500 group-hover:text-slate-300"}`}>
+                    <Icon size={18} strokeWidth={2.5} />
+                  </div>
+                  <span className="capitalize">{t(item.label) || item.label.replace('_', ' ')}</span>
+                </div>
+                
+                {active ? (
+                  <motion.div 
+                    layoutId="sidebar-active"
+                    className="absolute left-0 h-6 w-1 rounded-r-full bg-ai shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                  />
+                ) : (
+                  <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-40 group-hover:translate-x-0 transition-all" />
+                )}
               </Link>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Tactical Action Card */}
+        <div className="relative overflow-hidden rounded-2xl border border-loss/20 bg-loss/5 p-5 group">
+          <div className="absolute -right-4 -top-4 text-loss/10 rotate-12 group-hover:rotate-0 transition-transform duration-700">
+            <ShieldAlert size={80} />
           </div>
-        </GlassCard>
-        <GlassCard className="p-4">
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-            {t("next_best_action") || "Next best action"}
-          </p>
-          <h3 className="mt-3 text-lg font-semibold text-white">
-            {t("trim_it_exposure") || "Trim IT exposure by 6%"}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            {t("risk_contribution_msg") || "Risk contribution is rising faster than return contribution this week."}
-          </p>
-          <button className="mt-5 w-full rounded-md bg-ai px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-500">
-            {t("run_rebalance") || "Run rebalance"}
-          </button>
-        </GlassCard>
-        <GlassCard className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">{t("theme")}</span>
-            <ThemeToggle compact />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert size={14} className="text-loss" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-loss/80">
+                Critical Alert
+              </p>
+            </div>
+            <h3 className="text-base font-bold text-white leading-tight">
+              Rebalance Portfolio Required
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              Tech exposure is 12% above limit. Risk score increased to 7.4.
+            </p>
+            <button className="mt-4 w-full rounded-xl bg-loss px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all hover:scale-[1.02] active:scale-95">
+              Run Rebalance
+            </button>
           </div>
-        </GlassCard>
+        </div>
+
+        {/* Settings Mini-Card */}
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
+              <div className="h-2 w-2 rounded-full bg-profit animate-pulse" />
+            </div>
+            <span className="text-xs font-bold text-slate-400">System Live</span>
+          </div>
+          <ThemeToggle compact />
+        </div>
       </div>
     </aside>
   );
