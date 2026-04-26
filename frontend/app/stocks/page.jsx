@@ -166,7 +166,14 @@ export default function StocksPage() {
               </h4>
 
               {/* Chart */}
-              <div className="flex items-end gap-2 h-32 mb-6 px-2">
+              <div className="relative flex items-end gap-2 h-32 mb-6 px-2">
+                {/* Y-Axis Grid/Scale */}
+                <div className="absolute inset-x-0 h-full flex flex-col justify-between pointer-events-none border-l border-white/5">
+                  <div className="w-full border-t border-white/[0.03]" />
+                  <div className="w-full border-t border-white/[0.03]" />
+                  <div className="w-full border-t border-white/[0.03]" />
+                </div>
+
                 {(Object.entries(metric.yearly || {}).slice(-5) || []).map(
                   ([year, rawValue]) => {
                     const value = Number(rawValue);
@@ -187,13 +194,13 @@ export default function StocksPage() {
                     return (
                       <div
                         key={year}
-                        className="flex-1 flex flex-col items-center justify-end gap-2 group min-w-[30px] h-full"
+                        className="flex-1 flex flex-col items-center justify-end gap-2 group min-w-[30px] h-full z-10"
                       >
                         {/* Bar container */}
-                        <div className="w-full relative h-full flex items-end overflow-hidden">
+                        <div className="w-full relative h-full flex items-end overflow-visible">
                           {/* Bar */}
                           <div
-                            className="w-full rounded-t-md transition-all duration-700 group-hover:brightness-125 shadow-[0_0_15px_rgba(0,0,0,0.2)]"
+                            className="w-full rounded-t-md transition-all duration-500 group-hover:brightness-125 group-hover:scale-y-[1.02] origin-bottom shadow-[0_0_15px_rgba(0,0,0,0.2)]"
                             style={{
                               height: `${height}%`,
                               backgroundColor: barColor,
@@ -202,13 +209,14 @@ export default function StocksPage() {
                           />
 
                           {/* Tooltip */}
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-midnight border border-white/10 px-2 py-1 rounded text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap pointer-events-none">
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-ai border border-ai/50 px-2 py-1 rounded-lg text-[10px] font-black text-white opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all z-20 whitespace-nowrap pointer-events-none shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                             ₹{value.toLocaleString("en-IN")}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ai" />
                           </div>
                         </div>
 
                         {/* Year */}
-                        <span className="text-[10px] font-bold text-slate-500">
+                        <span className="text-[10px] font-bold text-slate-500 group-hover:text-white transition-colors">
                           {year}
                         </span>
                       </div>
