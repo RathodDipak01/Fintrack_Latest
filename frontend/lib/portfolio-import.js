@@ -4,6 +4,7 @@ export const BROKERS = [
   {
     id: "zerodha",
     name: "Zerodha",
+    logo: "https://s3-symbol-logo.tradingview.com/broker/zerodha--big.png",
     short: "Kite Connect — OAuth + holdings & positions APIs.",
     apiNote:
       "Requires Kite Connect app registration and per-user login consent.",
@@ -11,12 +12,14 @@ export const BROKERS = [
   {
     id: "angel_one",
     name: "Angel One",
+    logo: "https://s3-symbol-logo.tradingview.com/broker/angel-one--big.png",
     short: "SmartAPI (Angel Broking) for portfolio and order endpoints.",
     apiNote: "Uses API key + TOTP flow per Angel One documentation.",
   },
   {
     id: "groww",
     name: "Groww",
+    logo: "https://groww.in/groww-logo-270.png",
     short:
       "Connect when official partner APIs are available for your account type.",
     apiNote:
@@ -25,6 +28,7 @@ export const BROKERS = [
   {
     id: "upstox",
     name: "Upstox",
+    logo: "https://s3-symbol-logo.tradingview.com/broker/upstox--big.png",
     short: "Developer API with OAuth for holdings and funds.",
     apiNote: "Requires Upstox developer app and user authorization.",
   },

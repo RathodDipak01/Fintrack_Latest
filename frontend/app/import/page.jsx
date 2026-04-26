@@ -180,10 +180,20 @@ export default function ImportPortfolioPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-md text-sm font-bold ${
-                    isConnected ? "bg-profit text-white" : "bg-panel2 text-white"
+                  <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/5 ${
+                    isConnected ? "bg-white/10" : "bg-panel2"
                   }`}>
-                    {b.name.slice(0, 2).toUpperCase()}
+                    {b.logo ? (
+                      <img 
+                        src={b.logo} 
+                        alt={b.name} 
+                        className="h-full w-full object-contain p-1"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      />
+                    ) : null}
+                    <div className={`hidden h-full w-full items-center justify-center text-sm font-bold text-white`}>
+                      {b.name.slice(0, 2).toUpperCase()}
+                    </div>
                   </div>
                   {isConnected ? (
                     <CheckCircle2 size={16} className="text-profit" />
