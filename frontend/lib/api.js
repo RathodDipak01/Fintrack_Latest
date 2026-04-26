@@ -123,6 +123,7 @@ export const fintrackApi = {
   getQuote: (symbol) => fetchWithAuth(`/market/quote?symbol=${encodeURIComponent(symbol)}`, { method: "GET" }),
   getShareholding: (symbol) => fetchWithAuth(`/market/shareholding?symbol=${encodeURIComponent(symbol)}`, { method: "GET" }),
   getHistory: (symbol, interval = '1day') => fetchWithAuth(`/market/history?symbol=${encodeURIComponent(symbol)}&interval=${interval}`, { method: "GET" }),
+  getGrowwData: (symbol) => fetchWithAuth(`/market/groww/${encodeURIComponent(symbol)}`, { method: "GET" }),
   generateAiInsights: (data) =>
     fetchWithAuth("/ai/insights", {
       method: "POST",

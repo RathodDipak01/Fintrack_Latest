@@ -26,19 +26,22 @@ export default function StocksPage() {
 
   const [quote, setQuote] = useState(null);
   const [shareholding, setShareholding] = useState(null);
+  const [growwData, setGrowwData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchQuote() {
       setLoading(true);
       try {
-        const [qData, sData] = await Promise.all([
-          fintrackApi.getQuote(symbol),
-          fintrackApi.getShareholding(symbol)
+        const [qData, sData, gData] = await Promise.all([
+          fintrackApi.getQuote(symbol).catch(() => null),
+          fintrackApi.getShareholding(symbol).catch(() => null),
+          fintrackApi.getGrowwData(symbol).catch(() => null)
         ]);
         
         if (qData) setQuote(qData);
         if (sData) setShareholding(sData);
+        if (gData) setGrowwData(gData);
       } catch (err) {
         console.error("Failed to fetch market data:", err);
       } finally {
@@ -48,28 +51,45 @@ export default function StocksPage() {
     fetchQuote();
   }, [symbol]);
 
-  const stockName = quote?.name || "Company Details";
+  const stockName = growwData?.details?.fullName || quote?.name || "Company Details";
   const currencySymbol = quote?.currency === "INR" ? "₹" : quote?.currency === "USD" ? "$" : "₹";
   const stockPrice = quote?.price ? `${currencySymbol}${quote.price.toLocaleString(quote?.currency === "INR" ? "en-IN" : "en-US")}` : "...";
   const stockChangeRaw = quote?.changeRaw ? quote.changeRaw.toFixed(2) : "0.00";
   const stockChangePct = quote?.changePercent ? quote.changePercent.toFixed(2) : "0.00";
   const isUp = parseFloat(stockChangePct) >= 0;
 
+  // Process Groww Shareholding
+  const shKeys = growwData?.shareHoldingPattern ? Object.keys(growwData.shareHoldingPattern).reverse().slice(0, 6) : [];
+  const shRows = growwData?.shareHoldingPattern ? [
+    { investor: "Promoter", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.promoters?.individual?.percent?.toFixed(2) || "0.00") },
+    { investor: "FII", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.foreignInstitutions?.percent?.toFixed(2) || "0.00") },
+    { investor: "DII", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.otherDomesticInstitutions?.insurance?.percent?.toFixed(2) || "0.00") },
+    { investor: "Mutual Funds", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.mutualFunds?.percent?.toFixed(2) || "0.00") },
+    { investor: "Retail & Others", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.retailAndOthers?.percent?.toFixed(2) || "0.00") }
+  ] : null;
+
   return (
     <AppShell>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ai">
-          Stock Detail
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl">
-          {loading ? "Loading..." : stockName}
-        </h1>
+        <div className="flex items-center gap-4">
+          {growwData?.logoUrl && (
+            <img src={growwData.logoUrl} alt={stockName} className="w-12 h-12 rounded-full object-contain bg-white" />
+          )}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ai">
+              Stock Detail
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl">
+              {loading ? "Loading..." : stockName}
+            </h1>
+          </div>
+        </div>
         <p className="mt-4 max-w-3xl text-slate-400">
           Global market intelligence for {stockName}. Real-time prices, shareholding patterns, and technical analytics.
         </p>
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr] mt-8">
         <GlassCard className="overflow-hidden p-0">
           <div className="border-b border-white/10 p-5">
             <div className="flex items-center justify-between">
@@ -131,25 +151,27 @@ export default function StocksPage() {
               Insights on {stockName}
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-400">
-              Recent movement and critical parameters analysis for {stockName}.
+              Recent movement and critical parameters analysis.
             </p>
             <div className="thin-scrollbar mt-5 flex gap-4 overflow-x-auto pb-2">
-              {companyInsights.map((item) => (
-                <div
-                  key={item.title}
-                  className="min-w-[260px] rounded-lg border border-ai/40 bg-ai/10 p-4"
-                >
-                  <Pill tone={item.tag === "Watch closely" ? "warn" : "profit"}>
-                    {item.tag}
-                  </Pill>
-                  <h4 className="mt-5 text-lg font-semibold text-white">
-                    {item.title}
-                  </h4>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                    {item.text}
-                  </p>
-                </div>
-              ))}
+              <div className="min-w-[260px] rounded-lg border border-ai/40 bg-ai/10 p-4">
+                <Pill tone="profit">Key Metrics</Pill>
+                <h4 className="mt-5 text-lg font-semibold text-white">Valuation</h4>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  P/E Ratio: {growwData?.stats?.peRatio || "N/A"}<br/>
+                  Industry P/E: {growwData?.stats?.industryPe?.toFixed(2) || "N/A"}<br/>
+                  P/B Ratio: {growwData?.stats?.pbRatio || "N/A"}
+                </p>
+              </div>
+              <div className="min-w-[260px] rounded-lg border border-ai/40 bg-ai/10 p-4">
+                <Pill tone="warn">Returns</Pill>
+                <h4 className="mt-5 text-lg font-semibold text-white">Efficiency</h4>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  ROE: {growwData?.stats?.roe?.toFixed(2) || "N/A"}%<br/>
+                  Dividend Yield: {growwData?.stats?.divYield?.toFixed(2) || "N/A"}%<br/>
+                  Book Value: ₹{growwData?.stats?.bookValue?.toFixed(2) || "N/A"}
+                </p>
+              </div>
             </div>
           </div>
         </GlassCard>
@@ -201,7 +223,7 @@ export default function StocksPage() {
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
+      <section className="grid gap-5 xl:grid-cols-2 mt-5">
         <GlassCard className="p-6">
           <SectionHeader eyebrow="Shareholding" title="Shareholding patterns" />
           <div className="mt-4 overflow-x-auto rounded-lg border border-white/10">
@@ -209,7 +231,7 @@ export default function StocksPage() {
               <thead className="border-b border-white/10 bg-white/5 text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-medium">Investor</th>
-                  {["'26", "'25", "'24", "'23", "'22", "'21"].map(
+                  {(shKeys.length > 0 ? shKeys : ["'26", "'25", "'24", "'23", "'22", "'21"]).map(
                     (year, idx) => (
                       <th
                         key={year}
@@ -222,7 +244,7 @@ export default function StocksPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {(Array.isArray(shareholding) ? shareholding : shareholdingPatterns).map((row) => (
+                {(shRows || (Array.isArray(shareholding) ? shareholding : shareholdingPatterns)).map((row) => (
                   <tr key={row.investor} className="hover:bg-white/[0.02] transition">
                     <td className="px-4 py-4 font-medium text-white whitespace-nowrap">
                       {row.investor}
@@ -244,121 +266,70 @@ export default function StocksPage() {
 
         <GlassCard className="p-6">
           <SectionHeader eyebrow="Company" title="Entity Profile" />
-          <p className="text-sm leading-7 text-slate-300">
-            {stockName} ({symbol}) is a prominent entity listed on the {quote?.exchange || "NSE"}. 
-            The company operates in the {quote?.sector || "various"} sector and is a component of major market indices.
+          <p className="text-sm leading-7 text-slate-300 line-clamp-3">
+            {growwData?.details?.businessSummary || `${stockName} (${symbol}) is a prominent entity listed on the ${quote?.exchange || "NSE"}. The company operates in the ${quote?.sector || "various"} sector.`}
           </p>
           <div className="mt-5 divide-y divide-white/10 rounded-lg border border-white/10">
             {[
               ["Organization", stockName],
-              ["Symbol", symbol],
-              ["Exchange", quote?.exchange || "NSE"],
-              ["Sector", quote?.sector || "Equity"],
-              ["Currency", quote?.currency || "INR"],
+              ["CEO", growwData?.details?.ceo || "N/A"],
+              ["Founded", growwData?.details?.foundedYear || "N/A"],
+              ["Headquarters", growwData?.details?.headquarters || "N/A"],
+              ["Industry", growwData?.header?.industryName || quote?.sector || "Equity"],
             ].map(([label, value]) => (
               <div
                 key={label}
                 className="flex justify-between gap-4 px-4 py-4 text-sm hover:bg-white/[0.02] transition"
               >
                 <span className="text-slate-400">{label}</span>
-                <span className="text-right font-semibold text-white">
+                <span className="text-right font-semibold text-white truncate max-w-[200px]" title={String(value)}>
                   {value}
                 </span>
               </div>
             ))}
           </div>
-          <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.035] p-4 border-l-4 border-l-ai">
-            <h3 className="font-semibold text-white">Market Sentiment Analysis</h3>
-            <div className="mt-4 space-y-3">
-              {sentimentDetails.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex justify-between border-b border-white/10 pb-3 last:border-b-0"
-                >
-                  <span className="text-slate-300">{item.label}</span>
-                  <strong className="text-white">{item.value}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
         </GlassCard>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-3">
+      <section className="grid gap-5 xl:grid-cols-2 mt-5">
         <GlassCard className="p-6">
-          <SectionHeader eyebrow="Technicals" title="Momentum Score" />
-          <p className="mb-5 text-sm leading-7 text-slate-300">
-            Current technical indicators suggest a {isUp ? "Bullish" : "Neutral"} momentum for {symbol} in the short term.
-          </p>
-          <div className="divide-y divide-white/10 rounded-lg border border-white/10">
-            {stockTechnicalsDetail.metrics.map((metric) => (
-              <div
-                key={metric.label}
-                className="flex justify-between px-4 py-3 text-sm hover:bg-white/[0.02] transition"
-              >
-                <span className="text-slate-400">{metric.label}</span>
-                <div className="text-right">
-                  <div className="font-semibold text-white">{metric.value}</div>
-                  <div className="text-[10px] uppercase text-slate-500">
-                    {metric.note}
-                  </div>
+          <SectionHeader eyebrow="Technicals" title="Momentum Score & Stats" />
+          <div className="divide-y divide-white/10 rounded-lg border border-white/10 mt-4">
+            {growwData?.stats ? (
+              [
+                { label: "Market Cap", value: `₹${(growwData.stats.marketCap / 10000000).toFixed(2)} Cr` },
+                { label: "P/E Ratio", value: growwData.stats.peRatio },
+                { label: "P/B Ratio", value: growwData.stats.pbRatio },
+                { label: "Dividend Yield", value: `${growwData.stats.divYield}%` },
+                { label: "ROE", value: `${growwData.stats.roe}%` },
+                { label: "EPS (TTM)", value: `₹${growwData.stats.epsTtm}` },
+                { label: "Debt to Equity", value: growwData.stats.debtToEquity },
+                { label: "Current Ratio", value: growwData.stats.currentRatio },
+              ].map((metric) => (
+                <div key={metric.label} className="flex justify-between px-4 py-3 text-sm hover:bg-white/[0.02] transition">
+                  <span className="text-slate-400">{metric.label}</span>
+                  <span className="font-semibold text-white">{metric.value}</span>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="p-4 text-sm text-slate-400 text-center">Loading stats...</div>
+            )}
           </div>
         </GlassCard>
 
         <GlassCard className="p-6">
           <SectionHeader eyebrow="Fundamentals" title="Financial Health" />
-          <div className="space-y-5">
-            {stockFundamentalsDetail.groups.map((group) => (
-              <div
-                key={group.title}
-                className="rounded-lg border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/20"
-              >
-                <h3 className="mb-3 text-sm font-semibold text-white">
-                  {group.title}
-                </h3>
-                <div className="space-y-2">
-                  {group.rows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex justify-between border-b border-white/10 pb-2 text-sm last:border-b-0 last:pb-0"
-                    >
-                      <span className="text-slate-300">{row.label}</span>
-                      <strong className="text-white">{row.value}</strong>
-                    </div>
-                  ))}
+          <div className="divide-y divide-white/10 rounded-lg border border-white/10 mt-4">
+            {growwData?.fundamentals ? (
+              growwData.fundamentals.map((metric) => (
+                <div key={metric.name} className="flex justify-between px-4 py-3 text-sm hover:bg-white/[0.02] transition">
+                  <span className="text-slate-400">{metric.name}</span>
+                  <span className="font-semibold text-white">{metric.value}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <GlassCard className="p-6">
-          <SectionHeader eyebrow="Financials" title="Statement Summary" />
-          <div className="space-y-5">
-            {stockFinancialsDetail.groups.map((group) => (
-              <div
-                key={group.title}
-                className="rounded-lg border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/20"
-              >
-                <h3 className="mb-3 text-sm font-semibold text-white">
-                  {group.title}
-                </h3>
-                <div className="space-y-2">
-                  {group.rows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex justify-between border-b border-white/10 pb-2 text-sm last:border-b-0 last:pb-0"
-                    >
-                      <span className="text-slate-300">{row.label}</span>
-                      <strong className="text-white">{row.value}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="p-4 text-sm text-slate-400 text-center">Loading fundamentals...</div>
+            )}
           </div>
         </GlassCard>
       </section>

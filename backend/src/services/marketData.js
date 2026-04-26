@@ -271,3 +271,59 @@ export async function getStockProfile(symbol) {
     return null;
   }
 }
+
+/**
+ * Fetch rich stock data from Groww API
+ * Includes shareholding, financials, stats, and company details
+ */
+export async function getStockGrowwData(symbol) {
+  if (!symbol) throw new Error("Symbol is required");
+  
+  try {
+    // Clean symbol (e.g., ADANIPOWER.NS -> ADANIPOWER)
+    const cleanSymbol = symbol.split('.')[0];
+    
+    // 1. Get Groww search_id
+    const searchUrl = `https://groww.in/v1/api/search/v3/query/global/st_p_query?page=0&query=${encodeURIComponent(cleanSymbol)}&size=10&web=true`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    
+    if (!searchRes.ok) throw new Error(`Groww Search Error: ${searchRes.status}`);
+    const searchData = await searchRes.json();
+    
+    // Find the matching stock entity
+    const stockResult = searchData?.data?.content?.find(
+      c => c.entity_type === "Stocks" && 
+           (c.nse_scrip_code === cleanSymbol || c.bse_scrip_code === cleanSymbol || c.company_short_name === cleanSymbol)
+    ) || searchData?.data?.content?.find(c => c.entity_type === "Stocks");
+    
+    if (!stockResult || !stockResult.search_id) {
+      console.log(`No Groww search_id found for ${cleanSymbol}`);
+      return null;
+    }
+    
+    // 2. Fetch detailed company data
+    const detailsUrl = `https://groww.in/v1/api/stocks_data/v1/company/search_id/${stockResult.search_id}`;
+    const detailsRes = await fetch(detailsUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    });
+    
+    if (!detailsRes.ok) throw new Error(`Groww Details Error: ${detailsRes.status}`);
+    const data = await detailsRes.json();
+    
+    return {
+      searchId: data.header?.searchId,
+      logoUrl: data.header?.logoUrl,
+      details: data.details,
+      stats: data.stats,
+      fundamentals: data.fundamentals,
+      shareHoldingPattern: data.shareHoldingPattern,
+      financialStatement: data.financialStatement,
+      financialStatementV2: data.financialStatementV2,
+    };
+  } catch (error) {
+    console.error(`Groww fetch error for ${symbol}:`, error.message);
+    return null;
+  }
+}

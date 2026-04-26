@@ -62,4 +62,18 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+router.get('/groww/:symbol', async (req, res) => {
+  try {
+    const { getStockGrowwData } = await import('../services/marketData.js');
+    const symbol = req.params.symbol;
+    if (!symbol) return res.status(400).json({ success: false, error: 'Symbol parameter is required' });
+    const data = await getStockGrowwData(symbol);
+    if (!data) return res.status(404).json({ success: false, error: 'No Groww data found for symbol' });
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching Groww data:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Groww data', details: String(error) });
+  }
+});
+
 export default router;
