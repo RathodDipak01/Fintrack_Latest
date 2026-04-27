@@ -144,6 +144,8 @@ export const fintrackApi = {
   createAlert: (data) => fetchWithAuth("/alerts", { method: "POST", body: JSON.stringify(data) }),
   updateAlertStatus: (id, status) => fetchWithAuth(`/alerts/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   deleteAlert: (id) => fetchWithAuth(`/alerts/${id}`, { method: "DELETE" }),
+  
+  getAiSuggestions: () => fetchWithAuth("/ai/suggestions", { method: "GET" }),
 };
 
 export const isIndianMarketOpen = () => {

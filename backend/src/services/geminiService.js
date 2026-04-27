@@ -250,3 +250,72 @@ Write a professional, 3-paragraph strategy report.
   }
 }
 
+/**
+ * Generate AI-powered investment suggestions for trending stocks
+ */
+export async function generateAiSuggestions(trendingStocks) {
+  if (!env.GEMINI_API_KEY) {
+    return trendingStocks.map(s => ({
+      ...s,
+      aiTip: "Connect Gemini API for AI-powered suggestions.",
+      tag: "Trending"
+    }));
+  }
+
+  const prompt = `
+Act as a world-class Hedge Fund Strategist. Analyze the following trending stocks and provide a one-sentence "AI Tip" and a "Category" for each.
+
+STOCKS:
+${trendingStocks.map(s => `- ${s.symbol}: ${s.name}`).join("\n")}
+
+OUTPUT REQUIREMENTS:
+Provide ONLY a valid JSON array of objects, no markdown, no code blocks:
+[
+  {
+    "symbol": "...",
+    "aiTip": "...",
+    "category": "Growth" | "Value" | "Dividend" | "Momentum" | "Risk"
+  },
+  ...
+]
+`;
+
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
+      })
+    });
+
+    if (!response.ok) throw new Error("Gemini Suggestion API Error");
+    
+    const data = await response.json();
+    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "[]";
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    const aiResults = JSON.parse(text);
+    
+    return trendingStocks.map(s => {
+      const ai = aiResults.find(r => r.symbol === s.symbol);
+      return {
+        ...s,
+        aiTip: ai?.aiTip || "Significant market volume detected. Monitor for breakout.",
+        tag: ai?.category || "Momentum"
+      };
+    });
+  } catch (error) {
+    console.error("Gemini Suggestions Error:", error);
+    return trendingStocks.map(s => ({ 
+      ...s, 
+      aiTip: "Analysis temporarily limited due to API constraints.", 
+      tag: "Trending" 
+    }));
+  }
+}
+

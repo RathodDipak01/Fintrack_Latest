@@ -526,3 +526,32 @@ export async function getStockGrowwData(symbol) {
     return null;
   }
 }
+
+/**
+ * Fetch trending stocks from Yahoo Finance
+ */
+export async function getTrendingStocks() {
+  try {
+    // We'll fetch a mix of trending symbols and some high-volume ones
+    const trending = await yf.trendingSymbols('IN').catch(() => ({ quotes: [] }));
+    
+    // Fallback if trending fails or is empty
+    const symbols = trending.quotes?.length > 0 
+      ? trending.quotes.map(q => q.symbol).slice(0, 12)
+      : ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'ADANIPOWER.NS', 'IREDA.NS', 'JIOFIN.NS', 'ZOMATO.NS', 'RVNL.NS'];
+
+    const quotes = await yf.quote(symbols);
+    
+    return quotes.map(q => ({
+      symbol: q.symbol.replace('.NS', ''),
+      name: q.longName || q.shortName || q.symbol,
+      price: q.regularMarketPrice,
+      changePercent: q.regularMarketChangePercent?.toFixed(2) || "0.00",
+      marketCap: q.marketCap,
+      volume: q.regularMarketVolume
+    }));
+  } catch (error) {
+    console.error("Trending Stocks Fetch Error:", error);
+    return [];
+  }
+}

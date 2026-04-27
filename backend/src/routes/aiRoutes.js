@@ -98,4 +98,22 @@ aiRouter.get("/orchestrate/:symbol", requireAuth, async (req, res) => {
   }
 });
 
+aiRouter.get("/suggestions", async (req, res) => {
+  try {
+    const { getTrendingStocks } = await import("../services/marketData.js");
+    const { generateAiSuggestions } = await import("../services/geminiService.js");
+
+    const trending = await getTrendingStocks();
+    if (!trending || trending.length === 0) {
+      return ok(res, [], "No trending stocks found");
+    }
+
+    const suggested = await generateAiSuggestions(trending);
+    return ok(res, suggested, "AI Suggestions generated successfully");
+  } catch (error) {
+    console.error("Suggestions Route Error:", error);
+    return res.status(500).json({ success: false, error: "Failed to fetch suggestions" });
+  }
+});
+
 export default aiRouter;
