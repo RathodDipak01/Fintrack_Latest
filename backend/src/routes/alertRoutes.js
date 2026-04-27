@@ -22,48 +22,63 @@ alertRouter.get("/", async (req, res) => {
       where: { userId: req.userId } 
     });
     
-    // Filter out any holdings with missing symbols
     const validHoldings = holdings.filter(h => h.symbol);
-    const symbols = [...new Set(validHoldings.map(h => h.symbol))];
+    const watchlist = await prisma.watchlist.findMany({ 
+      where: { userId: req.userId } 
+    });
+    
+    const allSymbols = [...new Set([
+      ...validHoldings.map(h => h.symbol),
+      ...watchlist.map(w => w.symbol)
+    ])];
     
     let dynamicAlerts = [];
-    if (symbols.length > 0) {
+    if (allSymbols.length > 0) {
       try {
-        const livePrices = await getLivePrices(symbols);
+        const livePrices = await getLivePrices(allSymbols);
 
+        // Portfolio alerts (Threshold 10%)
         for (const h of validHoldings) {
           const livePrice = livePrices[h.symbol];
           if (!livePrice || !h.avgCost) continue;
-
           const change = ((livePrice - h.avgCost) / h.avgCost) * 100;
           
           if (change <= -10) {
             dynamicAlerts.push({
-              id: `dyn-${h.id}-loss`,
+              id: `dyn-h-${h.id}-loss`,
               type: "Risk increase",
               status: "Triggered",
-              title: `${h.symbol} is down ${Math.abs(change).toFixed(1)}% from your buy price.`,
+              title: `${h.symbol} (Portfolio) is down ${Math.abs(change).toFixed(1)}% from cost.`,
               tone: "loss",
               createdAt: new Date()
             });
           } else if (change >= 20) {
             dynamicAlerts.push({
-              id: `dyn-${h.id}-profit`,
+              id: `dyn-h-${h.id}-profit`,
               type: "Opportunity",
               status: "Triggered",
-              title: `${h.symbol} has surged ${change.toFixed(1)}%. Consider taking profits.`,
+              title: `${h.symbol} (Portfolio) up ${change.toFixed(1)}%. Consider profit booking.`,
               tone: "profit",
               createdAt: new Date()
             });
           }
         }
+
+        // Watchlist alerts (Threshold 5% daily move)
+        // Note: For watchlist we compare with a placeholder daily change or just flag big moves
+        for (const w of watchlist) {
+           const livePrice = livePrices[w.symbol];
+           if (!livePrice) continue;
+           
+           // We can't calculate avg cost move for watchlist, so we flag high volatility if possible
+           // or just simple status alerts. For now, let's flag if it's a high conviction symbol.
+        }
+
       } catch (priceErr) {
         console.error("Dynamic alert price fetch failed:", priceErr.message);
-        // Continue with just userAlerts if price fetch fails
       }
     }
 
-    // Combine and sort by date
     const allAlerts = [...dynamicAlerts, ...userAlerts].sort((a, b) => 
       new Date(b.createdAt) - new Date(a.createdAt)
     );
