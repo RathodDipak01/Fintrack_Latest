@@ -177,8 +177,10 @@ export async function orchestrateMlStrategy(symbol) {
     throw new Error("PYTHON_API_URL is not configured in .env");
   }
 
-  // 1. Format symbol for Python API (e.g., RELIANCE -> RELIANCE.NS)
-  const querySymbol = symbol.includes('.') ? symbol : `${symbol}.NS`;
+  // 1. Format symbol for Python API (e.g., ADANIPOWER-EQ -> ADANIPOWER.NS)
+  let cleanSymbol = symbol.split('-')[0]; // Remove -EQ, -BE etc.
+  const querySymbol = cleanSymbol.includes('.') ? cleanSymbol : `${cleanSymbol}.NS`;
+
 
   let mlData;
   try {

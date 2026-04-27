@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, BrainCircuit, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, BrainCircuit, Loader2, Activity, Newspaper, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { GlassCard, Pill, SectionHeader } from "./ui";
 import { fintrackApi } from "@/lib/api";
@@ -10,6 +10,7 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
   const [riskAppetite, setRiskAppetite] = useState("Medium");
   const [horizon, setHorizon] = useState("Medium Term");
   const [analysis, setAnalysis] = useState("");
+  const [rawData, setRawData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [source, setSource] = useState("");
   const [targetSymbol, setTargetSymbol] = useState(() => {
@@ -22,10 +23,16 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
     return top.symbol;
   });
 
+  // Clear analysis when target changes so user doesn't confuse old data with new target
+  useEffect(() => {
+    setAnalysis("");
+    setRawData(null);
+  }, [targetSymbol]);
 
   const generateDeepAnalysis = async () => {
     setIsGenerating(true);
     setAnalysis("");
+    setRawData(null);
     try {
       if (!targetSymbol) {
         throw new Error("Please select a holding to analyze.");
@@ -34,7 +41,8 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
       const data = await fintrackApi.orchestrateMlStrategy(targetSymbol);
       
       if (data) {
-        setAnalysis(`**[ML QUANTITATIVE AUDIT FOR: ${targetSymbol}]**\n\n` + (data.analysis || ""));
+        setRawData(data.raw_data);
+        setAnalysis(data.analysis || "");
         setSource("gemini");
       }
     } catch (err) {
@@ -297,9 +305,77 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
               </div>
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 pb-20 selection:bg-ai/30">
+                {rawData && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                    {/* XGBoost */}
+                    <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-5 relative overflow-hidden group hover:border-white/10 transition-colors">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Activity size={40} />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">XGBoost Classifier</p>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">Pattern Match</h4>
+                      <div className="flex items-end gap-2">
+                        <span className={`text-2xl font-black tracking-tight ${rawData.xgboost?.direction?.toLowerCase() === 'bullish' ? 'text-profit' : 'text-loss'}`}>
+                          {rawData.xgboost?.direction?.toUpperCase() || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="mt-4 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${rawData.xgboost?.direction?.toLowerCase() === 'bullish' ? 'bg-profit' : 'bg-loss'}`}
+                          style={{ width: `${(rawData.xgboost?.confidence || 0) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-right mt-1.5 font-bold text-slate-500">{(rawData.xgboost?.confidence * 100).toFixed(1)}% CONFIDENCE</p>
+                    </div>
+
+                    {/* FinBERT */}
+                    <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-5 relative overflow-hidden group hover:border-white/10 transition-colors">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Newspaper size={40} />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">FinBERT NLP</p>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">Media Sentiment</h4>
+                      <div className="flex items-end gap-2">
+                        <span className={`text-2xl font-black tracking-tight ${rawData.finbert?.label?.toLowerCase() === 'positive' ? 'text-profit' : rawData.finbert?.label?.toLowerCase() === 'negative' ? 'text-loss' : 'text-slate-300'}`}>
+                          {rawData.finbert?.label?.toUpperCase() || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">SCORE:</span>
+                        <span className="text-sm font-black text-white">{rawData.finbert?.score?.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Prophet */}
+                    <div className="rounded-2xl border border-white/5 bg-slate-900/60 p-5 relative overflow-hidden group hover:border-white/10 transition-colors">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        {rawData.prophet?.trend?.toLowerCase() === 'upward' ? <TrendingUp size={40} /> : <TrendingDown size={40} />}
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Prophet Model</p>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">30-Day Trajectory</h4>
+                      <div className="flex items-end gap-2">
+                        <span className="text-2xl font-black tracking-tight text-white">
+                          ₹{rawData.prophet?.forecast_30d?.toFixed(2) || '---'}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">TREND:</span>
+                        <span className={`text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded ${rawData.prophet?.trend?.toLowerCase() === 'upward' ? 'bg-profit/20 text-profit' : 'bg-loss/20 text-loss'}`}>
+                          {rawData.prophet?.trend || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <h3 className="text-lg font-black text-white uppercase tracking-widest mb-6 pb-4 border-b border-white/10 flex items-center gap-3">
+                  <BrainCircuit className="text-ai" size={24} />
+                  Synthesis & Strategy
+                </h3>
                 {formatText(analysis)}
               </div>
             )}
+
           </div>
           
           {/* Decorative gradients */}

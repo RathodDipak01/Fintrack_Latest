@@ -42,7 +42,7 @@ async function fetchWithAuth(endpoint, options = {}) {
     if (res.status === 401) {
       removeAuthToken(); // Token likely expired or invalid
     }
-    throw new Error(body?.message || "An API error occurred");
+    throw new Error(body?.error || body?.message || "An API error occurred");
   }
 
   return body?.data || body;
