@@ -28,20 +28,20 @@ import { CandleProxyChart, MobilePriceChart } from "@/components/charts";
 import TradingViewWidget from "@/components/tradingview-widget";
 
 const TV_SYMBOL_MAP = {
-  '^NSEI': 'NSE:NIFTY',
-  '^BSESN': 'BSE:SENSEX',
+  '^NSEI': 'INDEX:NIFTY',
+  '^BSESN': 'INDEX:SENSEX',
   '^NSEBANK': 'NSE:BANKNIFTY',
   '^CNXIT': 'NSE:CNXIT',
   '^NSEMDCP50': 'NSE:NIFTY_MID_50',
   '^INDIAVIX': 'NSE:INDIAVIX',
-  '^GSPC': 'SP:SPX',
-  '^IXIC': 'NASDAQ:IXIC',
-  '^DJI': 'DJ:DJI',
-  '^RUT': 'RUSSELL:RUT',
-  '^FTSE': 'FTSE:UKX',
-  '^N225': 'TSE:NI225',
-  '^HSI': 'HSI:HSI',
-  '^GDAXI': 'XETR:DAX',
+  '^GSPC': 'INDEX:SPX',
+  '^IXIC': 'INDEX:IUXX',
+  '^DJI': 'INDEX:DOWI',
+  '^RUT': 'INDEX:RUT',
+  '^FTSE': 'INDEX:UKX',
+  '^N225': 'INDEX:NI225',
+  '^HSI': 'INDEX:HSI',
+  '^GDAXI': 'INDEX:DAX',
 };
 
 const DEFAULT_SYMBOLS = ['^NSEI', '^BSESN', '^NSEBANK', '^GSPC', '^IXIC'];
