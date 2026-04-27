@@ -252,7 +252,8 @@ export default function LandingPage() {
               Fintrack combines real-time broker synchronization with institutional-grade AI insights to give you an unfair advantage in the markets.
             </p>
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/signup" className="group flex items-center gap-2 rounded-full bg-ai px-8 py-4 text-lg font-bold text-white shadow-glow transition-all hover:scale-105 active:scale-95">
+              <Link href="/signup" className="group flex items-center gap-2 rounded-full bg-ai px-8 py-4 text-lg font-bold text-white shadow-glow transition-all active:scale-95">
+
                 Build your Portfolio
                 <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
               </Link>
@@ -396,7 +397,8 @@ export default function LandingPage() {
           </div>
           <div className="grid gap-8 lg:grid-cols-3">
             {plans.map((p, i) => (
-              <div key={i} className={`relative flex flex-col rounded-3xl border p-10 transition-all hover:scale-[1.02] ${p.popular ? "border-ai bg-ai/5 shadow-glow" : "border-white/10 bg-white/[0.02]"}`}>
+              <div key={i} className={`relative flex flex-col rounded-3xl border p-10 transition-all ${p.popular ? "border-ai bg-ai/5 shadow-glow" : "border-white/10 bg-white/[0.02]"}`}>
+
                 {p.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-ai px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white">
                     Most Professional Choice

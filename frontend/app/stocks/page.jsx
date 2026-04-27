@@ -174,7 +174,8 @@ export default function StocksPage() {
                         <div className="w-full relative h-full flex items-end overflow-visible">
                           {/* Bar */}
                           <div
-                            className="w-full rounded-t-md transition-all duration-500 group-hover:brightness-125 group-hover:scale-y-[1.02] origin-bottom shadow-[0_0_15px_rgba(0,0,0,0.2)]"
+                            className="w-full rounded-t-md transition-all duration-500 group-hover:brightness-125 origin-bottom shadow-[0_0_15px_rgba(0,0,0,0.2)]"
+
                             style={{
                               height: `${height}%`,
                               backgroundColor: barColor,
@@ -519,7 +520,8 @@ export default function StocksPage() {
                 >
                   {thumbnail && (
                     <div className="relative h-48 w-full overflow-hidden">
-                      <img src={thumbnail} alt={event.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <img src={thumbnail} alt={event.title} className="w-full h-full object-cover transition-transform duration-700" />
+
                       <div className="absolute inset-0 bg-gradient-to-t from-midnight to-transparent opacity-60" />
                       <div className="absolute top-4 left-4 bg-ai/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white shadow-lg">
                         {event.publisher || "NEWS"}

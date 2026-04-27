@@ -181,7 +181,8 @@ export default function ProfilePage() {
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent p-6 md:p-10 transition-all duration-500">
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
             <div className="relative">
-              <div className="h-32 w-32 rounded-3xl border-4 border-ai/30 overflow-hidden shadow-glow transition-transform hover:scale-105 cursor-pointer">
+              <div className="h-32 w-32 rounded-3xl border-4 border-ai/30 overflow-hidden shadow-glow transition-transform cursor-pointer">
+
                 <Image 
                   src={isEditing ? editForm.avatar : settings.user.avatar} 
                   alt="Profile" 
@@ -444,7 +445,8 @@ export default function ProfilePage() {
                     ].map((plan) => (
                       <div 
                         key={plan.name} 
-                        className={`relative rounded-2xl border ${plan.popular ? "border-ai/50 bg-ai/5 shadow-[0_0_40px_rgba(59,130,246,0.15)]" : "border-white/10 bg-white/[0.02]"} p-6 flex flex-col transition-all hover:scale-[1.02]`}
+                        className={`relative rounded-2xl border ${plan.popular ? "border-ai/50 bg-ai/5 shadow-[0_0_40px_rgba(59,130,246,0.15)]" : "border-white/10 bg-white/[0.02]"} p-6 flex flex-col transition-all`}
+
                       >
                         {plan.popular && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-ai px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-glow">

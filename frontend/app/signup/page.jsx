@@ -289,7 +289,8 @@ export default function SignupPage() {
                       disabled={isLoading}
                       className={`w-full group p-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-ai/50 transition-all text-left flex items-center gap-4 ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
-                      <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center transition-transform">
+
                         {p.icon}
                       </div>
                       <div className="flex-1">
