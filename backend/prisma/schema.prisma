@@ -23,6 +23,7 @@ model User {
   holdings     PortfolioHolding[]
   watchlist    Watchlist[]
   signals      StockSignal[]
+  alerts       Alert[]
 }
 
 model PortfolioHolding {
@@ -61,4 +62,19 @@ model StockSignal {
   confidence Int
   note       String
   createdAt  DateTime @default(now())
+}
+
+model Alert {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  title       String
+  type        String   // Opportunity, Risk, Price Drop
+  status      String   @default("Active") // Active, Triggered, Paused
+  tone        String   @default("ai") // profit, loss, warn, ai
+  symbol      String?
+  targetPrice Float?
+  condition   String?  // 'above', 'below'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

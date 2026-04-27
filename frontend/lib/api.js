@@ -138,6 +138,12 @@ export const fintrackApi = {
     fetchWithAuth("/ai/signals", { method: "GET" }),
   orchestrateMlStrategy: (symbol) =>
     fetchWithAuth(`/ai/orchestrate/${encodeURIComponent(symbol)}`, { method: "GET" }),
+
+  // --- Alerts ---
+  getAlerts: () => fetchWithAuth("/alerts", { method: "GET" }),
+  createAlert: (data) => fetchWithAuth("/alerts", { method: "POST", body: JSON.stringify(data) }),
+  updateAlertStatus: (id, status) => fetchWithAuth(`/alerts/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteAlert: (id) => fetchWithAuth(`/alerts/${id}`, { method: "DELETE" }),
 };
 
 export const isIndianMarketOpen = () => {
