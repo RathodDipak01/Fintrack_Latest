@@ -148,7 +148,73 @@ export default function PortfolioPage() {
   }, [filteredHoldings, filterSource, summary]);
 
   useEffect(() => {
-    fetchPortfolioData();
+    let isMounted = true;
+    
+    const fetchWithMountCheck = () => {
+      setIsLoading(true);
+      Promise.all([
+        fintrackApi.getHoldings(),
+        fintrackApi.getSummary(),
+      ])
+        .then(([hData, sData]) => {
+          if (!isMounted) return;
+          const mapped = (hData || []).map((h) => ({
+            ...h,
+            avg: h.avgCost,
+            price: h.currentPrice,
+            change: h.changePercent,
+            pnl: String(h.pnl),
+            productType: h.productType || "CNC",
+            source: h.source || "CSV"
+          }));
+          setLiveHoldings(mapped);
+          setSummary(sData);
+        })
+        .catch((err) => {
+          console.error(err);
+          if (
+            err.message.includes("Authentication") ||
+            err.message.includes("401")
+          ) {
+            if (isMounted) setLiveHoldings([]);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false);
+        });
+    };
+
+    // Initial fetch
+    fetchWithMountCheck();
+    
+    // Poll every 10 seconds
+    const interval = setInterval(() => {
+      // Don't show loading state during background polling
+      Promise.all([
+        fintrackApi.getHoldings(),
+        fintrackApi.getSummary(),
+      ])
+        .then(([hData, sData]) => {
+          if (!isMounted) return;
+          const mapped = (hData || []).map((h) => ({
+            ...h,
+            avg: h.avgCost,
+            price: h.currentPrice,
+            change: h.changePercent,
+            pnl: String(h.pnl),
+            productType: h.productType || "CNC",
+            source: h.source || "CSV"
+          }));
+          setLiveHoldings(mapped);
+          setSummary(sData);
+        })
+        .catch(console.error);
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleAngelOneSync = async () => {

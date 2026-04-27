@@ -1161,21 +1161,38 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      fintrackApi.getHoldings(),
-      fintrackApi.getSummary(),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/market/indices`).then(res => res.json())
+    let isMounted = true;
+    
+    const fetchData = () => {
+      Promise.all([
+        fintrackApi.getHoldings(),
+        fintrackApi.getSummary(),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/market/indices`).then(res => res.json())
+      ])
+        .then(([hData, sData, mData]) => {
+          if (!isMounted) return;
+          setHoldings(hData || []);
+          setSummary(sData);
+          if (mData && mData.success) {
+            setMarketIndices(mData.data);
+          }
+        })
+        .catch(console.error)
+        .finally(() => {
+          if (isMounted) setIsLoading(false);
+        });
+    };
 
-    ])
-      .then(([hData, sData, mData]) => {
-        setHoldings(hData || []);
-        setSummary(sData);
-        if (mData && mData.success) {
-          setMarketIndices(mData.data);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    // Initial fetch
+    fetchData();
+    
+    // Poll every 10 seconds for real-time updates
+    const interval = setInterval(fetchData, 10000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const allocation = useMemo(() => {

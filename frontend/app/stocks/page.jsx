@@ -31,7 +31,9 @@ export default function StocksPage() {
   const [expandedSummary, setExpandedSummary] = useState(false);
 
   useEffect(() => {
-    async function fetchQuote() {
+    let isMounted = true;
+    
+    async function fetchAll() {
       setLoading(true);
       try {
         const [qData, sData, gData] = await Promise.all([
@@ -40,16 +42,34 @@ export default function StocksPage() {
           fintrackApi.getGrowwData(symbol).catch(() => null)
         ]);
 
-        if (qData) setQuote(qData);
-        if (sData) setShareholding(sData);
-        if (gData) setGrowwData(gData);
+        if (isMounted) {
+          if (qData) setQuote(qData);
+          if (sData) setShareholding(sData);
+          if (gData) setGrowwData(gData);
+        }
       } catch (err) {
         console.error("Failed to fetch market data:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
-    fetchQuote();
+    
+    fetchAll();
+
+    // Only poll the quote (live price) every 10 seconds, not the heavy fundamental data
+    const interval = setInterval(async () => {
+      try {
+        const qData = await fintrackApi.getQuote(symbol);
+        if (isMounted && qData) setQuote(qData);
+      } catch (err) {
+        // Silent fail for polling
+      }
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [symbol]);
 
   const stockName = growwData?.details?.fullName || quote?.name || "Company Details";

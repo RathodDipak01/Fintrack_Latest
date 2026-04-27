@@ -172,6 +172,46 @@ export async function getStockQuote(symbol) {
   }
 }
 
+// Memory cache for batch live prices to avoid rate limiting during polling
+const livePriceCache = new Map();
+
+export async function getLivePrices(symbols) {
+  if (!symbols || symbols.length === 0) return {};
+  
+  const now = Date.now();
+  const CACHE_TTL = 10000; // 10 seconds
+  const result = {};
+  const symbolsToFetch = [];
+  
+  for (const sym of symbols) {
+    const cached = livePriceCache.get(sym);
+    if (cached && (now - cached.timestamp < CACHE_TTL)) {
+      result[sym] = cached.price;
+    } else {
+      symbolsToFetch.push(sym);
+    }
+  }
+
+  if (symbolsToFetch.length > 0) {
+    try {
+      // Yahoo finance requires .NS for most Indian stocks
+      const querySymbols = symbolsToFetch.map(s => s.includes('.') ? s : `${s}.NS`);
+      const quotes = await yf.quote(querySymbols);
+      
+      quotes.forEach(quote => {
+        // Map back to original symbol format
+        const origSymbol = quote.symbol.replace('.NS', '');
+        result[origSymbol] = quote.regularMarketPrice;
+        livePriceCache.set(origSymbol, { price: quote.regularMarketPrice, timestamp: now });
+      });
+    } catch (e) {
+      console.warn("Batch quote fetch failed, falling back to cache if available:", e.message);
+    }
+  }
+
+  return result;
+}
+
 async function fetchScreenerShareholding(symbol) {
   let cleanSymbol = symbol.split('.')[0].toUpperCase();
   const adrMap = { "HDB": "HDFCBANK", "IBN": "ICICIBANK", "INFY": "INFY", "WIT": "WIPRO", "RDY": "DRREDDY", "TTM": "TATAMOTORS" };

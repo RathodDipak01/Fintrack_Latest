@@ -18,15 +18,30 @@ export default function AiInsightsPage() {
   const [marketHistory, setMarketHistory] = useState([]);
 
   useEffect(() => {
-    fintrackApi.getSummary().then(setPortfolioSummary).catch(() => null);
-    fintrackApi.getHoldings().then(setLiveHoldings).catch(() => null);
+    let isMounted = true;
+    
+    const fetchData = () => {
+      fintrackApi.getSummary().then(data => { if (isMounted) setPortfolioSummary(data) }).catch(() => null);
+      fintrackApi.getHoldings().then(data => { if (isMounted) setLiveHoldings(data) }).catch(() => null);
+    };
+
+    // Initial fetch
+    fetchData();
     fintrackApi.getSavedSignals().then(setSignals).catch(() => null);
     fintrackApi.getHistory("^NSEI", "1wk").then(data => {
-      if (data && data.candles) {
+      if (data && data.candles && isMounted) {
         // Just take the last 4 weeks of data as baseline
         setMarketHistory(data.candles.slice(-4));
       }
     }).catch(() => null);
+
+    // Poll for live portfolio updates
+    const interval = setInterval(fetchData, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleAddSignal = async () => {

@@ -4,6 +4,7 @@ import { prisma } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { created, error, ok } from "../utils/apiResponse.js";
 import { getSector } from "../utils/sectorMap.js";
+import { getLivePrices } from "../services/marketData.js";
 // Mock data summary structures untouched for phase 1 transition
 import { allocation, portfolioSummary } from "../data/mockData.js";
 
@@ -26,16 +27,28 @@ portfolioRouter.get("/summary", async (req, res) => {
   try {
     const holdings = await prisma.portfolioHolding.findMany({ where: { userId: req.userId } });
     
+    // Inject live prices
+    const symbols = [...new Set(holdings.map(h => h.symbol))];
+    const livePrices = await getLivePrices(symbols);
+    
     const totalInvestment = holdings.reduce((sum, h) => sum + h.qty * h.avgCost, 0);
-    const currentValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
+    const currentValue = holdings.reduce((sum, h) => {
+      const livePrice = livePrices[h.symbol] || h.currentPrice || h.avgCost;
+      return sum + h.qty * livePrice;
+    }, 0);
     const totalReturns = currentValue - totalInvestment;
+    
+    // Add realistic 1-day change based on live price vs DB price (simulating day close)
+    const yesterdayValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
+    const todayChange = currentValue - yesterdayValue;
+    const todayChangePercent = yesterdayValue > 0 ? (todayChange / yesterdayValue) * 100 : 0;
     
     return ok(res, {
       totalInvestment: parseFloat(totalInvestment.toFixed(2)),
       currentValue: parseFloat(currentValue.toFixed(2)),
       totalReturns: parseFloat(totalReturns.toFixed(2)),
-      todayChange: 0, // Mocked until live feed integrated
-      todayChangePercent: 0,
+      todayChange: parseFloat(todayChange.toFixed(2)),
+      todayChangePercent: parseFloat(todayChangePercent.toFixed(2)),
       riskScore: 65,
       diversification: holdings.length > 5 ? "Well diversified" : "Concentrated"
     });
@@ -48,13 +61,22 @@ portfolioRouter.get("/summary", async (req, res) => {
 portfolioRouter.get("/allocation", async (req, res) => {
   try {
     const holdings = await prisma.portfolioHolding.findMany({ where: { userId: req.userId } });
-    const totalValue = holdings.reduce((sum, h) => sum + h.qty * (h.currentPrice || h.avgCost), 0);
+    
+    // Inject live prices
+    const symbols = [...new Set(holdings.map(h => h.symbol))];
+    const livePrices = await getLivePrices(symbols);
+    
+    const totalValue = holdings.reduce((sum, h) => {
+      const livePrice = livePrices[h.symbol] || h.currentPrice || h.avgCost;
+      return sum + h.qty * livePrice;
+    }, 0);
     
     if (totalValue === 0) return ok(res, { sectors: [], marketCap: [] });
 
     // Group by sector
     const sectorGroups = holdings.reduce((acc, h) => {
-      const val = h.qty * (h.currentPrice || h.avgCost);
+      const livePrice = livePrices[h.symbol] || h.currentPrice || h.avgCost;
+      const val = h.qty * livePrice;
       // Use getSector if h.sector is missing or generic 'Diversified'
       let sector = h.sector;
       if (!sector || sector === "Diversified" || sector === "General") {
@@ -66,7 +88,8 @@ portfolioRouter.get("/allocation", async (req, res) => {
 
     // Group by market cap
     const capGroups = holdings.reduce((acc, h) => {
-      const val = h.qty * (h.currentPrice || h.avgCost);
+      const livePrice = livePrices[h.symbol] || h.currentPrice || h.avgCost;
+      const val = h.qty * livePrice;
       const mc = h.marketCap || 0;
       let category = "Small cap";
       if (mc > 2000000000000) category = "Large cap";
@@ -128,17 +151,23 @@ portfolioRouter.get("/holdings", async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
+    // Inject live prices
+    const symbols = [...new Set(userHoldings.map(h => h.symbol))];
+    const livePrices = await getLivePrices(symbols);
+    
     // Add computed metrics and enrich sector on the fly
     const enrichedHoldings = userHoldings.map(h => {
       let sector = h.sector;
       if (!sector || sector === "Diversified" || sector === "General") {
         sector = getSector(h.symbol);
       }
+      const livePrice = livePrices[h.symbol] || h.currentPrice || h.avgCost;
       return {
         ...h,
         sector,
-        changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
-        pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
+        currentPrice: livePrice,
+        changePercent: livePrice ? (((livePrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
+        pnl: livePrice ? ((livePrice - h.avgCost) * h.qty).toFixed(2) : 0
       };
     });
     
