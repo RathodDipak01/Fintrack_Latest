@@ -17,14 +17,18 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSendOtp = (e) => {
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    // Mock OTP sending
-    setTimeout(() => {
+    setError("");
+    try {
+      await fintrackApi.sendOtp(email);
       setStep(2);
+    } catch (err) {
+      setError(err.message || "Failed to send OTP. Please check your email.");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleVerifyOtp = async (e) => {
@@ -32,14 +36,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    if (otp !== "111111") {
-      setError("Invalid OTP. Please use the temporary code '111111'.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fintrackApi.login({ email, password });
+      const response = await fintrackApi.login({ email, password, otp });
       
       if (response && response.token) {
         setAuthToken(response.token);
@@ -80,7 +78,7 @@ export default function LoginPage() {
           </Link>
           <h1 className="text-3xl font-bold text-white">{step === 1 ? "Secure Sign In" : "Verify Identity"}</h1>
           <p className="text-slate-400 mt-2">
-            {step === 1 ? "Enter your registered details" : `We've sent a 6-digit code to ${phone.slice(-4).padStart(phone.length, '*')}`}
+            {step === 1 ? "Enter your registered email" : `We've sent a 6-digit code to ${email}`}
           </p>
         </div>
 
@@ -116,22 +114,6 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-ai/50 focus:border-ai transition-all"
                       placeholder="name@example.com"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300 ml-1">Contact Number</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      maxLength={10}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-ai/50 focus:border-ai transition-all"
-                      placeholder="9876543210"
                       required
                     />
                   </div>
@@ -185,7 +167,7 @@ export default function LoginPage() {
                 <div className="space-y-4 text-center">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-sm font-medium text-slate-300">Enter OTP</label>
-                    <button type="button" onClick={() => setStep(1)} className="text-xs text-ai hover:underline">Change Phone?</button>
+                    <button type="button" onClick={() => setStep(1)} className="text-xs text-ai hover:underline">Change Email?</button>
                   </div>
                   <div className="relative">
                     <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-ai" size={18} />

@@ -20,15 +20,18 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSendOtps = (e) => {
+  const handleSendOtps = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    // Mock OTP sending
-    setTimeout(() => {
+    try {
+      await fintrackApi.sendOtp(email);
       setStep(2);
+    } catch (err) {
+      setError(err.message || "Failed to send OTP. Please check your email.");
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleVerifyAndSignup = async (e) => {
@@ -36,14 +39,8 @@ export default function SignupPage() {
     setIsLoading(true);
     setError("");
 
-    if (emailOtp !== "111111" || phoneOtp !== "111111") {
-      setError("One or more OTPs are incorrect. Use '111111' for both.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fintrackApi.signup({ fullName, email, phone, password });
+      const response = await fintrackApi.signup({ fullName, email, password, otp: emailOtp });
       if (response && response.token) {
         setAuthToken(response.token);
         localStorage.setItem("fintrack_user", JSON.stringify(response.user));
@@ -95,9 +92,9 @@ export default function SignupPage() {
               <span className="text-2xl font-bold text-white tracking-tight">Fintrack</span>
             </div>
           </Link>
-          <h1 className="text-3xl font-bold text-white">{step === 1 ? "Create Account" : "Dual Verification"}</h1>
+          <h1 className="text-3xl font-bold text-white">{step === 1 ? "Create Account" : "Email Verification"}</h1>
           <p className="text-slate-400 mt-2">
-            {step === 1 ? "Join the next generation of AI investing" : "We've sent unique codes to your email and phone"}
+            {step === 1 ? "Join the next generation of AI investing" : `We've sent a unique code to ${email}`}
           </p>
         </div>
 
@@ -138,35 +135,18 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-ai transition-all"
-                        placeholder="deepak@fintrack.app"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Contact No</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        maxLength={10}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-ai transition-all"
-                        placeholder="9876543210"
-                        required
-                      />
-                    </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-ai transition-all"
+                      placeholder="deepak@fintrack.app"
+                      required
+                    />
                   </div>
                 </div>
 
@@ -197,7 +177,7 @@ export default function SignupPage() {
                   disabled={isLoading}
                   className="w-full mt-4 bg-ai hover:bg-ai/90 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-glow transition-all active:scale-[0.98] disabled:opacity-70"
                 >
-                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Send OTPs"}
+                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Send OTP"}
                   {!isLoading && <ArrowRight size={18} />}
                 </button>
               </motion.form>
@@ -223,26 +203,9 @@ export default function SignupPage() {
                       maxLength={6}
                       value={emailOtp}
                       onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-white/5 border border-ai/20 rounded-xl py-4 text-center text-2xl font-mono tracking-[0.5em] text-white focus:outline-none focus:border-ai transition-all"
+                      className="w-full bg-white/5 border border-ai/20 rounded-xl py-6 text-center text-3xl font-mono tracking-[0.5em] text-white focus:outline-none focus:border-ai transition-all"
                       placeholder="000000"
                       autoFocus
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center px-1">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                        <Phone size={12} className="text-profit" /> Phone OTP
-                      </label>
-                      <span className="text-[10px] text-slate-600">{phone}</span>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={phoneOtp}
-                      onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-white/5 border border-profit/20 rounded-xl py-4 text-center text-2xl font-mono tracking-[0.5em] text-white focus:outline-none focus:border-profit transition-all"
-                      placeholder="000000"
                     />
                   </div>
                 </div>
@@ -250,7 +213,7 @@ export default function SignupPage() {
                 <div className="space-y-4">
                   <button
                     type="submit"
-                    disabled={isLoading || emailOtp.length < 6 || phoneOtp.length < 6}
+                    disabled={isLoading || emailOtp.length < 6}
                     className="w-full bg-profit hover:bg-green-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all active:scale-[0.98] disabled:opacity-50"
                   >
                     {isLoading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}

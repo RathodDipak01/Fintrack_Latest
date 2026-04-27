@@ -50,6 +50,11 @@ async function fetchWithAuth(endpoint, options = {}) {
 
 export const fintrackApi = {
   // --- Auth ---
+  sendOtp: (email) =>
+    fetchWithAuth("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
   login: (data) =>
     fetchWithAuth("/auth/login", {
       method: "POST",
