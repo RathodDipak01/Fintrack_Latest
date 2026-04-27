@@ -37,7 +37,8 @@ function LivingDashboard() {
     }, 2000);
 
     // Fetch dynamic AI strategy
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}/ai/market-strategy`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/ai/market-strategy`)
+
       .then(res => res.json())
       .then(data => {
         if (data?.data?.strategy) {
@@ -239,10 +240,10 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <Pill tone="ai" className="mb-6 px-4 py-1.5 text-xs font-bold uppercase tracking-widest">
+            {/* <Pill tone="ai" className="mb-6 px-4 py-1.5 text-xs font-bold uppercase tracking-widest">
               <Sparkles size={12} className="mr-2 inline" />
               Powered by Google Gemini 1.5 Pro
-            </Pill>
+            </Pill>  */}
             <h1 className="mx-auto max-w-4xl text-5xl font-bold leading-tight text-white md:text-7xl lg:text-8xl">
               Wealth tracking <br />
               <span className="bg-gradient-to-r from-ai via-blue-400 to-purple-400 bg-clip-text text-transparent">reimagined with AI</span>

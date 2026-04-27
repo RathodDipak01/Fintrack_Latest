@@ -1123,7 +1123,8 @@ export default function Home() {
     Promise.all([
       fintrackApi.getHoldings(),
       fintrackApi.getSummary(),
-      fetch('http://localhost:4000/api/market/indices').then(res => res.json())
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/market/indices`).then(res => res.json())
+
     ])
       .then(([hData, sData, mData]) => {
         setHoldings(hData || []);
