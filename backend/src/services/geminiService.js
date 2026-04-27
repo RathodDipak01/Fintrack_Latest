@@ -225,7 +225,7 @@ Write a professional, 3-paragraph strategy report.
       },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+        generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
       })
     });
 
