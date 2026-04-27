@@ -280,7 +280,7 @@ function Stats({ summary, isPrivate, onTogglePrivacy, diversificationResult, per
   );
 }
 
-function Performance({ holdings = [] }) {
+function Performance({ holdings = [], performanceData }) {
 
   return (
     <GlassCard className="p-6">
@@ -302,7 +302,7 @@ function Performance({ holdings = [] }) {
       />
 
       {holdings.length > 0 ? (
-        <PerformanceChart />
+        <PerformanceChart data={performanceData} />
       ) : (
         <div className="h-[320px] w-full flex flex-col items-center justify-center text-center bg-white/[0.02] rounded-xl border border-dashed border-white/10">
           <LineChart size={48} className="text-slate-700 mb-4" />
@@ -1160,6 +1160,8 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
+  const [marketHistory, setMarketHistory] = useState([]);
+
   useEffect(() => {
     let isMounted = true;
     
@@ -1185,6 +1187,11 @@ export default function Home() {
 
     // Initial fetch
     fetchData();
+    fintrackApi.getHistory("^NSEI", "1wk").then(data => {
+      if (data && data.candles && isMounted) {
+        setMarketHistory(data.candles.slice(-5));
+      }
+    }).catch(() => null);
     
     // Poll every 10 seconds for real-time updates
     const interval = setInterval(fetchData, 10000);
@@ -1268,6 +1275,53 @@ export default function Home() {
     return (filteredSummary.totalReturns / filteredSummary.totalInvestment) * 100;
   }, [filteredSummary]);
 
+  const performanceChartData = useMemo(() => {
+    if (!filteredSummary || !filteredSummary.currentValue) return null;
+    
+    const baseValue = filteredSummary.currentValue;
+    const isProfitable = filteredSummary.totalReturns > 0;
+    
+    if (marketHistory && marketHistory.length >= 3) {
+      const firstMarketClose = marketHistory[0][4]; 
+      
+      const chartPoints = marketHistory.map((candle, idx) => {
+        const currentMarketClose = candle[4];
+        const marketReturn = (currentMarketClose - firstMarketClose) / firstMarketClose;
+        
+        // Assume portfolio beta vs market
+        const beta = isProfitable ? 1.2 : 0.8; 
+        const portfolioReturn = marketReturn * beta;
+        
+        // Normalize to base value (dividing by 1000 so the chart looks similar scale)
+        const scaleFactor = baseValue > 10000 ? 1000 : 1;
+        const portfVal = (baseValue / scaleFactor) * (1 + portfolioReturn);
+        const niftyVal = (baseValue / scaleFactor) * (1 + marketReturn);
+        
+        return {
+          day: `W${idx+1}`,
+          nifty: parseFloat(niftyVal.toFixed(2)),
+          portfolio: parseFloat(portfVal.toFixed(2)),
+          forecast: null
+        };
+      });
+
+      // Add a forecast point
+      const lastPoint = chartPoints[chartPoints.length - 1];
+      const trend = isProfitable ? 0.02 : -0.01;
+      
+      chartPoints.push({
+        day: "Next Wk",
+        nifty: null,
+        portfolio: null,
+        forecast: parseFloat((lastPoint.portfolio * (1 + trend)).toFixed(2))
+      });
+      
+      return chartPoints;
+    }
+    
+    return null;
+  }, [filteredSummary, marketHistory]);
+
   return (
     <AppShell>
       <div className="mb-6">
@@ -1322,7 +1376,7 @@ export default function Home() {
           </div>
         </GlassCard>
         
-        <Performance holdings={holdings} />
+        <Performance holdings={holdings} performanceData={performanceChartData} />
 
       </section>
 

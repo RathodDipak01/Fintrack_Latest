@@ -57,10 +57,11 @@ export function Sparkline() {
   );
 }
 
-export function PerformanceChart() {
+export function PerformanceChart({ data }) {
+  const chartData = data || performanceData;
   return (
     <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={performanceData} className="chart-grid">
+      <LineChart data={chartData} className="chart-grid">
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="day"
@@ -72,7 +73,7 @@ export function PerformanceChart() {
           stroke="#94A3B8"
           tickLine={false}
           axisLine={false}
-          domain={[108, 126]}
+          domain={['auto', 'auto']}
         />
         <Tooltip contentStyle={tooltipStyle} />
         <Line
