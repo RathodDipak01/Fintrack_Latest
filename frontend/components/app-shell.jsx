@@ -91,7 +91,13 @@ function TopNav({ onNotifications }) {
     }
   }, []);
 
-  const displayAvatar = settings.user?.avatar && !settings.user.avatar.includes("api.dicebear.com") 
+  const isValidCustomAvatar = (url) => {
+    if (!url) return false;
+    if (url.includes("api.dicebear.com")) return false;
+    return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/");
+  };
+
+  const displayAvatar = isValidCustomAvatar(settings.user?.avatar)
     ? settings.user.avatar 
     : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(settings.user?.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`;
 

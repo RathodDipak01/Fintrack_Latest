@@ -103,47 +103,63 @@ export default function AiInsightsPage() {
   }, [displayHoldings]);
 
   const riskScoreData = useMemo(() => {
-    if (!displayHoldings.length) return { score: 0, label: "N/A", tone: "neutral" };
+    if (!displayHoldings.length) return { score: 0, label: "N/A", tone: "neutral", factors: [] };
     
-    let score = 50; // Start at neutral
-    
-    // 1. Diversification adjustment
-    if (displayHoldings.length > 10) score += 15;
-    else if (displayHoldings.length > 5) score += 5;
-    else score -= 15;
-
-    // 2. Market Cap adjustment
-    const smallCap = marketCapAllocation.find(c => c.name === "Small cap")?.value || 0;
-    const largeCap = marketCapAllocation.find(c => c.name === "Large cap")?.value || 0;
-    
+    let score = 85; // Start high (Low Risk) and subtract for risk factors
     const factors = [];
     
-    // 1. Diversification adjustment
-    if (displayHoldings.length >= 8) { score += 15; factors.push({ name: "High Diversification", impact: "+15" }); }
-    else if (displayHoldings.length >= 4) { score += 5; factors.push({ name: "Adequate Diversification", impact: "+5" }); }
-    else { score -= 15; factors.push({ name: "Concentration Risk", impact: "-15" }); }
+    // 1. Diversification Risk
+    if (displayHoldings.length < 5) {
+      score -= 20;
+      factors.push({ name: "High Concentration (Low Holdings)", impact: "-20" });
+    } else if (displayHoldings.length < 10) {
+      score -= 5;
+      factors.push({ name: "Moderate Diversification", impact: "-5" });
+    } else {
+      factors.push({ name: "Excellent Diversification", impact: "+5" });
+      score += 5;
+    }
 
-    // 2. Market Cap adjustment
-    if (smallCap > 40) { score -= 20; factors.push({ name: "High Small-Cap Exposure", impact: "-20" }); }
-    else if (smallCap > 20) { score -= 10; factors.push({ name: "Moderate Small-Cap", impact: "-10" }); }
+    // 2. Market Cap Risk
+    const smallCap = marketCapAllocation.find(c => c.name === "Small cap")?.value || 0;
+    const midCap = marketCapAllocation.find(c => c.name === "Mid cap")?.value || 0;
     
-    if (largeCap > 50) { score += 15; factors.push({ name: "Large-Cap Stability", impact: "+15" }); }
+    if (smallCap > 40) {
+      score -= 25;
+      factors.push({ name: "Aggressive Small-Cap Exposure", impact: "-25" });
+    } else if (smallCap > 20) {
+      score -= 10;
+      factors.push({ name: "Moderate Small-Cap Risk", impact: "-10" });
+    }
 
-    // 3. Performance adjustment
-    if (portfolioSummary?.totalReturns > 0) {
-      score += 5; factors.push({ name: "Positive Alpha", impact: "+5" });
+    if (midCap > 50) {
+      score -= 10;
+      factors.push({ name: "High Mid-Cap Volatility", impact: "-10" });
+    }
+
+    // 3. Sector Risk
+    const topSector = allocation[0];
+    if (topSector && topSector.value > 40) {
+      score -= 15;
+      factors.push({ name: `Sector Bias (${topSector.name})`, impact: "-15" });
+    }
+
+    // 4. Performance factor
+    if (portfolioSummary?.totalReturns < 0) {
+      score -= 5;
+      factors.push({ name: "Negative Historical Trend", impact: "-5" });
     }
 
     // Clamp score
-    const finalScore = Math.max(10, Math.min(95, score));
+    const finalScore = Math.max(5, Math.min(98, score));
     
     let label = "Medium risk";
     let tone = "warn";
-    if (finalScore >= 70) { label = "Low risk"; tone = "profit"; }
-    else if (finalScore <= 40) { label = "High risk"; tone = "loss"; }
+    if (finalScore >= 75) { label = "Low risk"; tone = "profit"; }
+    else if (finalScore <= 45) { label = "High risk"; tone = "loss"; }
 
     return { score: finalScore, label, tone, factors };
-  }, [displayHoldings, marketCapAllocation, portfolioSummary]);
+  }, [displayHoldings, marketCapAllocation, allocation, portfolioSummary]);
 
   const riskContributors = useMemo(() => {
     if (!displayHoldings.length) return [];
@@ -279,17 +295,38 @@ export default function AiInsightsPage() {
             title="Volatility + diversification score"
             action={<BrainCircuit className="text-ai" />}
           />
-          <div className="relative mx-auto mt-4 grid h-56 w-56 place-items-center rounded-full border-[18px] border-white/5 bg-white/[0.02]">
-            {/* Dynamic gauge ring */}
-            <div 
-              className="absolute inset-[-18px] rounded-full border-[18px] border-transparent transition-all duration-1000" 
-              style={{ 
-                borderTopColor: riskScoreData.score > 40 ? '#22C55E' : '#EF4444',
-                borderRightColor: riskScoreData.score > 70 ? '#22C55E' : (riskScoreData.score > 30 ? '#EAB308' : 'transparent'),
-                transform: `rotate(${riskScoreData.score * 3.6}deg)`
-              }}
-            />
-            <div className="text-center">
+          <div className="relative mx-auto mt-4 flex h-56 w-56 items-center justify-center">
+            {/* Proper SVG Circular Gauge */}
+            <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+              {/* Track */}
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="transparent"
+                className="text-white/5"
+              />
+              {/* Progress */}
+              <circle
+                cx="50"
+                cy="50"
+                r="38"
+                stroke="currentColor"
+                strokeWidth="8"
+                strokeDasharray={239}
+                strokeDashoffset={239 - (239 * riskScoreData.score) / 100}
+                strokeLinecap="round"
+                fill="transparent"
+                className={`transition-all duration-1000 ${
+                  riskScoreData.tone === "profit" ? "text-profit" : 
+                  riskScoreData.tone === "loss" ? "text-loss" : "text-warn"
+                }`}
+                style={{ filter: "drop-shadow(0 0 12px currentColor)" }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
               <p className="text-5xl font-bold text-white">{riskScoreData.score}</p>
               <p className={`mt-1 text-sm font-medium ${riskScoreData.tone === 'profit' ? 'text-profit' : riskScoreData.tone === 'loss' ? 'text-loss' : 'text-warn'}`}>
                 {riskScoreData.label}

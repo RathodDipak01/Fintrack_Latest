@@ -63,9 +63,15 @@ export default function ProfilePage() {
     if (!isEditing) setEditForm({ ...userData });
   }, [userData, isEditing]);
 
+  const isValidCustomAvatar = (url) => {
+    if (!url) return false;
+    if (url.includes("api.dicebear.com")) return false;
+    return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/");
+  };
+
   const displayAvatar = isEditing
-    ? (editForm.avatar && !editForm.avatar.includes("api.dicebear.com") ? editForm.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(editForm.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`)
-    : (settings.user.avatar && !settings.user.avatar.includes("api.dicebear.com") ? settings.user.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(settings.user.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`);
+    ? (isValidCustomAvatar(editForm.avatar) ? editForm.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(editForm.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`)
+    : (isValidCustomAvatar(settings.user.avatar) ? settings.user.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(settings.user.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`);
 
   const handleSaveProfile = () => {
     updateSetting("user", { ...settings.user, ...editForm });
