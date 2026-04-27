@@ -532,26 +532,50 @@ export async function getStockGrowwData(symbol) {
  */
 export async function getTrendingStocks() {
   try {
-    // We'll fetch a mix of trending symbols and some high-volume ones
-    const trending = await yf.trendingSymbols('IN').catch(() => ({ quotes: [] }));
+    // Attempt to fetch live trending symbols
+    const trending = await yf.trendingSymbols('IN').catch(err => {
+      console.warn("Yahoo Trending API Rate Limited or Failed:", err.message);
+      return { quotes: [] };
+    });
     
-    // Fallback if trending fails or is empty
+    // Core fallback symbols to ensure we always have something to show
+    const FALLBACK_SYMBOLS = [
+      'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 
+      'ADANIPOWER.NS', 'IREDA.NS', 'JIOFIN.NS', 'ZOMATO.NS', 'RVNL.NS',
+      'TATASTEEL.NS', 'ITC.NS'
+    ];
+
     const symbols = trending.quotes?.length > 0 
       ? trending.quotes.map(q => q.symbol).slice(0, 12)
-      : ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS', 'ADANIPOWER.NS', 'IREDA.NS', 'JIOFIN.NS', 'ZOMATO.NS', 'RVNL.NS'];
+      : FALLBACK_SYMBOLS;
 
-    const quotes = await yf.quote(symbols);
-    
-    return quotes.map(q => ({
-      symbol: q.symbol.replace('.NS', ''),
-      name: q.longName || q.shortName || q.symbol,
-      price: q.regularMarketPrice,
-      changePercent: q.regularMarketChangePercent?.toFixed(2) || "0.00",
-      marketCap: q.marketCap,
-      volume: q.regularMarketVolume
-    }));
+    try {
+      const quotes = await yf.quote(symbols);
+      
+      if (!quotes || quotes.length === 0) throw new Error("No quotes returned");
+
+      return quotes.map(q => ({
+        symbol: q.symbol.replace('.NS', ''),
+        name: q.longName || q.shortName || q.symbol,
+        price: q.regularMarketPrice || 0,
+        changePercent: q.regularMarketChangePercent?.toFixed(2) || "0.00",
+        marketCap: q.marketCap || 0,
+        volume: q.regularMarketVolume || 0
+      }));
+    } catch (quoteErr) {
+      console.error("Resilient Trending Fallback Triggered:", quoteErr.message);
+      // Even if quote fetch fails, return symbols so AI can still generate tips (though price will be 0)
+      return FALLBACK_SYMBOLS.map(s => ({
+        symbol: s.replace('.NS', ''),
+        name: s.replace('.NS', ''),
+        price: 0,
+        changePercent: "0.00",
+        marketCap: 0,
+        volume: 0
+      }));
+    }
   } catch (error) {
-    console.error("Trending Stocks Fetch Error:", error);
+    console.error("Trending Stocks Critical Error:", error);
     return [];
   }
 }
