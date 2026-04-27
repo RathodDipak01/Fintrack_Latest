@@ -22,7 +22,7 @@ let cachedData = [
   { symbol: '^DJI', name: 'DOW JONES', value: '39,475.90', change: '-0.77%', pointsChange: '-305.47', up: false },
 ];
 let lastFetchTime = Date.now(); // Start fresh to avoid immediate rate limit
-const CACHE_DURATION_MS = 60 * 1000; // Increase cache to 60 seconds to avoid hitting limits often
+const CACHE_DURATION_MS = 10 * 1000; // 10 seconds to allow for real-time updates
 
 export async function fetchLiveIndicesData() {
   const now = Date.now();
@@ -36,10 +36,25 @@ export async function fetchLiveIndicesData() {
       console.warn("Yahoo indices quote rate-limited:", e.message);
       return [];
     });
+    
+    // Attempt to get real-time NIFTY and BANKNIFTY from Angel One
+    let angelIndices = null;
+    try {
+      const { getLiveAngelIndices } = await import('./angelOne.js');
+      angelIndices = await getLiveAngelIndices();
+    } catch (e) {
+      console.warn("Failed to fetch Angel One indices:", e.message);
+    }
 
     const formattedData = INDICES_MAP.map((indexDef) => {
+      // 1. Try Angel One data for true real-time (overrides Yahoo)
+      if (angelIndices) {
+        const angelData = angelIndices.find(a => a.symbol === indexDef.symbol);
+        if (angelData) return angelData;
+      }
+
+      // 2. Try Yahoo Finance
       const quote = yahooResults.find(r => r.symbol === indexDef.symbol);
-      
       if (quote && quote.regularMarketPrice) {
         const isUp = quote.regularMarketChange >= 0;
         return {
@@ -52,7 +67,7 @@ export async function fetchLiveIndicesData() {
         };
       }
 
-      // Fallback to cache
+      // 3. Fallback to cache
       const lastKnown = cachedData && cachedData.find(c => c.symbol === indexDef.symbol);
       if (lastKnown) return lastKnown;
 

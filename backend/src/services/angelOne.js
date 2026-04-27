@@ -58,3 +58,67 @@ export async function fetchLiveMarketData(symbols) {
     ltp: parseFloat((Math.random() * 5000 + 100).toFixed(2)),
   }));
 }
+
+// Global cached session for market data
+let globalSmartApi = null;
+let sessionTime = 0;
+
+export async function getLiveAngelIndices() {
+  if (!env.angelClientId || !env.angelPassword || !env.angelTotpSecret || !env.angelApiKey) {
+    return null;
+  }
+
+  // Create session if it doesn't exist or is older than 6 hours
+  if (!globalSmartApi || (Date.now() - sessionTime > 6 * 60 * 60 * 1000)) {
+    const smartApi = new SmartAPI({ api_key: env.angelApiKey });
+    const totp = generateSync({ secret: env.angelTotpSecret });
+    const session = await smartApi.generateSession(env.angelClientId, env.angelPassword, totp);
+    
+    if (session && session.status) {
+      globalSmartApi = smartApi;
+      sessionTime = Date.now();
+    } else {
+      return null;
+    }
+  }
+
+  try {
+    const md = await globalSmartApi.marketData({
+      mode: "FULL",
+      exchangeTokens: {
+        "NSE": ["26000", "26009"]
+      }
+    });
+
+    if (md && md.status && md.data && md.data.fetched) {
+      const results = [];
+      for (const item of md.data.fetched) {
+        let symbol = '';
+        let name = '';
+        if (item.symbolToken === "26000") {
+          symbol = '^NSEI';
+          name = 'NIFTY 50';
+        } else if (item.symbolToken === "26009") {
+          symbol = '^NSEBANK';
+          name = 'BANK NIFTY';
+        }
+
+        if (symbol) {
+          const isUp = item.netChange >= 0;
+          results.push({
+            symbol,
+            name,
+            value: item.ltp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            change: `${isUp ? '+' : ''}${(item.percentChange || 0).toFixed(2)}%`,
+            pointsChange: `${isUp ? '+' : ''}${(item.netChange || 0).toFixed(2)}`,
+            up: isUp
+          });
+        }
+      }
+      return results;
+    }
+  } catch (error) {
+    console.error("Angel One getLiveAngelIndices Error:", error.message);
+  }
+  return null;
+}
