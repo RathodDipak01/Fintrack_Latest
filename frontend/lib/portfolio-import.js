@@ -4,7 +4,7 @@ export const BROKERS = [
   {
     id: "zerodha",
     name: "Zerodha",
-    logo: "https://s3-symbol-logo.tradingview.com/broker/zerodha--big.png",
+    logo: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn.zeebiz.com%2Fsites%2Fdefault%2Ffiles%2F2022%2F08%2F11%2F194563-zerodha-logo.png",
     short: "Kite Connect — OAuth + holdings & positions APIs.",
     apiNote:
       "Requires Kite Connect app registration and per-user login consent.",
@@ -12,7 +12,7 @@ export const BROKERS = [
   {
     id: "angel_one",
     name: "Angel One",
-    logo: "https://s3-symbol-logo.tradingview.com/broker/angel-one--big.png",
+    logo: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fasset.brandfetch.io%2FidDA95rr8l%2FidWGpFYO3-.png",
     short: "SmartAPI (Angel Broking) for portfolio and order endpoints.",
     apiNote: "Uses API key + TOTP flow per Angel One documentation.",
   },
@@ -28,7 +28,7 @@ export const BROKERS = [
   {
     id: "upstox",
     name: "Upstox",
-    logo: "https://s3-symbol-logo.tradingview.com/broker/upstox--big.png",
+    logo: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.yourstory.com%2Fcs%2Fimages%2Fcompanies%2FEPVvNvF6400x400-1592372726195.png",
     short: "Developer API with OAuth for holdings and funds.",
     apiNote: "Requires Upstox developer app and user authorization.",
   },

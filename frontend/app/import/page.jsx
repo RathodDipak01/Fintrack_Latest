@@ -180,14 +180,14 @@ export default function ImportPortfolioPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/5 ${
-                    isConnected ? "bg-white/10" : "bg-panel2"
-                  }`}>
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/5 bg-white p-1.5 flex items-center justify-center shadow-lg">
+
                     {b.logo ? (
                       <img 
                         src={b.logo} 
                         alt={b.name} 
-                        className="h-full w-full object-contain p-1"
+                        className="h-full w-full object-contain"
+
                         onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                       />
                     ) : null}
