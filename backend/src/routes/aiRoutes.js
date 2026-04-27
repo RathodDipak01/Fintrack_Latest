@@ -86,4 +86,16 @@ aiRouter.get("/signal/:symbol", requireAuth, async (req, res) => {
   }
 });
 
+aiRouter.get("/orchestrate/:symbol", requireAuth, async (req, res) => {
+  const { symbol } = req.params;
+  try {
+    const { orchestrateMlStrategy } = await import("../services/geminiService.js");
+    const result = await orchestrateMlStrategy(symbol);
+    return ok(res, result, "ML Strategy orchestrated successfully");
+  } catch (error) {
+    console.error("Orchestrate Error:", error);
+    return res.status(500).json({ success: false, error: "Failed to orchestrate ML strategy", details: String(error) });
+  }
+});
+
 export default aiRouter;

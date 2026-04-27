@@ -133,4 +133,7 @@ export const fintrackApi = {
     fetchWithAuth(`/ai/signal/${encodeURIComponent(symbol)}`, { method: "GET" }),
   getSavedSignals: () =>
     fetchWithAuth("/ai/signals", { method: "GET" }),
+  orchestrateMlStrategy: (symbol) =>
+    fetchWithAuth(`/ai/orchestrate/${encodeURIComponent(symbol)}`, { method: "GET" }),
 };
+

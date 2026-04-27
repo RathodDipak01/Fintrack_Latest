@@ -12,26 +12,34 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
   const [analysis, setAnalysis] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [source, setSource] = useState("");
+  const [targetSymbol, setTargetSymbol] = useState(() => {
+    if (!holdings?.length) return "";
+    const top = [...holdings].sort((a, b) => {
+      const valA = (a.qty || 0) * (a.price || a.avgCost || a.avg || 0);
+      const valB = (b.qty || 0) * (b.price || b.avgCost || b.avg || 0);
+      return valB - valA;
+    })[0];
+    return top.symbol;
+  });
+
 
   const generateDeepAnalysis = async () => {
     setIsGenerating(true);
     setAnalysis("");
     try {
-      const data = await fintrackApi.generateAiInsights({
-        holdings,
-        allocation,
-        marketCapAllocation,
-        summary,
-        riskAppetite,
-        horizon
-      });
+      if (!targetSymbol) {
+        throw new Error("Please select a holding to analyze.");
+      }
+      
+      const data = await fintrackApi.orchestrateMlStrategy(targetSymbol);
       
       if (data) {
-        setAnalysis(data.analysis || (Array.isArray(data.insights) ? data.insights.join("\n\n") : ""));
-        setSource(data.source || "mock");
+        setAnalysis(`**[ML QUANTITATIVE AUDIT FOR: ${targetSymbol}]**\n\n` + (data.analysis || ""));
+        setSource("gemini");
       }
     } catch (err) {
-      setAnalysis(`**Error:** Failed to connect to AI engine. \n\nDetails: ${err.message}. \n\nPlease ensure your backend is running.`);
+      setAnalysis(`**Error:** Failed to connect to AI engine. \n\nDetails: ${err.message}. \n\nPlease ensure your Python ML backend is running on Cloudflare/Localhost.`);
+
       setSource("error");
     } finally {
       setIsGenerating(false);
@@ -117,8 +125,28 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
         {/* Controls Sidebar */}
         <div className="p-8 space-y-8 border-r border-white/5 bg-white/[0.01]">
           <div className="space-y-6">
+            
+            {/* Target Selection */}
+            {holdings?.length > 0 && (
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 block">Target Asset</label>
+                <select
+                  value={targetSymbol}
+                  onChange={(e) => setTargetSymbol(e.target.value)}
+                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-ai transition-colors"
+                >
+                  {holdings.map((h) => (
+                    <option key={h.symbol} value={h.symbol}>
+                      {h.symbol} ({h.qty} shares)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-4 block">Risk Appetite</label>
+
               <div className="grid grid-cols-1 gap-2">
                 {["Low", "Medium", "High"].map(level => (
                   <button

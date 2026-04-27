@@ -171,3 +171,79 @@ Provide ONLY a valid JSON object with the following exact keys, no markdown form
     return { symbol, signal: "Neutral", confidence: 50, note: "Error communicating with AI engine." };
   }
 }
+
+export async function orchestrateMlStrategy(symbol) {
+  if (!env.pythonApiUrl) {
+    throw new Error("PYTHON_API_URL is not configured in .env");
+  }
+
+  // 1. Format symbol for Python API (e.g., RELIANCE -> RELIANCE.NS)
+  const querySymbol = symbol.includes('.') ? symbol : `${symbol}.NS`;
+
+  let mlData;
+  try {
+    const pyResponse = await fetch(`${env.pythonApiUrl}/${querySymbol}`);
+    if (!pyResponse.ok) {
+      throw new Error(`Python API returned status ${pyResponse.status}`);
+    }
+    mlData = await pyResponse.json();
+  } catch (error) {
+    console.error("Python ML API Error:", error.message);
+    throw new Error("Failed to fetch data from Machine Learning engine.");
+  }
+
+  if (!env.GEMINI_API_KEY) {
+    return {
+      raw_data: mlData,
+      analysis: "### API KEY MISSING\nPlease add your `GEMINI_API_KEY` to see the synthesized report."
+    };
+  }
+
+  // 2. Synthesize using Gemini
+  const prompt = `Act as a Senior Quant Analyst. Synthesize the following machine learning model outputs for ${symbol}:
+
+DATA:
+- Time-Series (Prophet): Projects a 30-day price of ${mlData.prophet?.forecast_30d} (${mlData.prophet?.trend}).
+- Classifier (XGBoost): ${(mlData.xgboost?.confidence * 100).toFixed(2)}% confident in a ${mlData.xgboost?.direction} move.
+- NLP Sentiment (FinBERT): ${mlData.finbert?.label} (Score: ${mlData.finbert?.score}).
+
+TASK:
+Write a professional, 3-paragraph strategy report.
+1. Resolve any conflicts (e.g., if Prophet is bullish but sentiment is negative, explain why).
+2. Provide a clear reasoning for the current market state.
+3. Conclude with a tactical recommendation (Buy/Hold/Trim).`;
+
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Gemini API failure during synthesis");
+    }
+
+    const data = await response.json();
+    const fullText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate analysis.";
+    
+    // 3. Return the combined payload
+    return {
+      raw_data: mlData,
+      analysis: fullText
+    };
+  } catch (error) {
+    console.error("Gemini Synthesis Error:", error.message);
+    return {
+      raw_data: mlData,
+      analysis: "### Synthesis Failed\nThe ML data was retrieved successfully, but the AI synthesis engine failed to respond. \n\nError: " + error.message
+    };
+  }
+}
+
