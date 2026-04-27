@@ -187,30 +187,7 @@ function Sidebar() {
           })}
         </div>
 
-        {/* Tactical Action Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-loss/20 bg-loss/5 p-5 group">
-          <div className="absolute -right-4 -top-4 text-loss/10 rotate-12 group-hover:rotate-0 transition-transform duration-700">
-            <ShieldAlert size={80} />
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldAlert size={14} className="text-loss" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-loss/80">
-                Critical Alert
-              </p>
-            </div>
-            <h3 className="text-base font-bold text-white leading-tight">
-              Rebalance Portfolio Required
-            </h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Tech exposure is 12% above limit. Risk score increased to 7.4.
-            </p>
-            <button className="mt-4 w-full rounded-xl bg-loss px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all hover:scale-[1.02] active:scale-95">
-              Run Rebalance
-            </button>
-          </div>
-        </div>
+
 
         {/* Settings Mini-Card */}
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 flex items-center justify-between">
