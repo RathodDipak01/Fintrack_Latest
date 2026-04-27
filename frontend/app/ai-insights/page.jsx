@@ -66,7 +66,7 @@ export default function AiInsightsPage() {
     }
   };
 
-  const displayHoldings = liveHoldings.length > 0 ? liveHoldings : holdings;
+  const displayHoldings = liveHoldings;
 
   const allocation = useMemo(() => {
     if (!displayHoldings.length) return [];
@@ -290,7 +290,35 @@ export default function AiInsightsPage() {
         </p>
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+      {!liveHoldings.length ? (
+        <div className="mt-8">
+          <GlassCard className="p-12 text-center border-dashed border-white/10 bg-white/[0.02]">
+            <div className="mx-auto h-20 w-20 rounded-2xl bg-ai/10 flex items-center justify-center text-ai mb-6">
+              <BrainCircuit size={40} />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">AI Intelligence is Ready</h2>
+            <p className="text-slate-400 max-w-md mx-auto mb-8">
+              To generate ML projections and risk insights, we need to analyze your portfolio. Connect your broker or import your holdings to see live quant data.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <button 
+                onClick={() => window.location.href = "/import"}
+                className="px-8 py-3 bg-ai hover:bg-blue-500 text-white font-bold rounded-xl shadow-glow transition-all active:scale-[0.98]"
+              >
+                Sync Your Portfolio
+              </button>
+              <button 
+                onClick={() => window.location.href = "/watchlist"}
+                className="px-8 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all"
+              >
+                Explore Watchlist
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      ) : (
+        <>
+          <section className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
         <GlassCard className="p-6">
           <SectionHeader
             eyebrow="AI Risk"
@@ -442,6 +470,8 @@ export default function AiInsightsPage() {
           ))}
         </div>
       </GlassCard>
+      </>
+      )}
     </AppShell>
   );
 }
