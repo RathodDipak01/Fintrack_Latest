@@ -15,11 +15,18 @@ export default function AiInsightsPage() {
   const [signals, setSignals] = useState([]);
   const [newSymbol, setNewSymbol] = useState("");
   const [isLoadingSignal, setIsLoadingSignal] = useState(false);
+  const [marketHistory, setMarketHistory] = useState([]);
 
   useEffect(() => {
     fintrackApi.getSummary().then(setPortfolioSummary).catch(() => null);
     fintrackApi.getHoldings().then(setLiveHoldings).catch(() => null);
     fintrackApi.getSavedSignals().then(setSignals).catch(() => null);
+    fintrackApi.getHistory("^NSEI", "1wk").then(data => {
+      if (data && data.candles) {
+        // Just take the last 4 weeks of data as baseline
+        setMarketHistory(data.candles.slice(-4));
+      }
+    }).catch(() => null);
   }, []);
 
   const handleAddSignal = async () => {
@@ -94,21 +101,34 @@ export default function AiInsightsPage() {
     const smallCap = marketCapAllocation.find(c => c.name === "Small cap")?.value || 0;
     const largeCap = marketCapAllocation.find(c => c.name === "Large cap")?.value || 0;
     
-    if (smallCap > 40) score -= 20;
-    else if (smallCap > 20) score -= 10;
+    const factors = [];
     
-    if (largeCap > 60) score += 10;
+    // 1. Diversification adjustment
+    if (displayHoldings.length >= 8) { score += 15; factors.push({ name: "High Diversification", impact: "+15" }); }
+    else if (displayHoldings.length >= 4) { score += 5; factors.push({ name: "Adequate Diversification", impact: "+5" }); }
+    else { score -= 15; factors.push({ name: "Concentration Risk", impact: "-15" }); }
+
+    // 2. Market Cap adjustment
+    if (smallCap > 40) { score -= 20; factors.push({ name: "High Small-Cap Exposure", impact: "-20" }); }
+    else if (smallCap > 20) { score -= 10; factors.push({ name: "Moderate Small-Cap", impact: "-10" }); }
+    
+    if (largeCap > 50) { score += 15; factors.push({ name: "Large-Cap Stability", impact: "+15" }); }
+
+    // 3. Performance adjustment
+    if (portfolioSummary?.totalReturns > 0) {
+      score += 5; factors.push({ name: "Positive Alpha", impact: "+5" });
+    }
 
     // Clamp score
     const finalScore = Math.max(10, Math.min(95, score));
     
     let label = "Medium risk";
     let tone = "warn";
-    if (finalScore > 75) { label = "Low risk"; tone = "profit"; }
-    else if (finalScore < 40) { label = "High risk"; tone = "loss"; }
+    if (finalScore >= 70) { label = "Low risk"; tone = "profit"; }
+    else if (finalScore <= 40) { label = "High risk"; tone = "loss"; }
 
-    return { score: finalScore, label, tone };
-  }, [displayHoldings, marketCapAllocation]);
+    return { score: finalScore, label, tone, factors };
+  }, [displayHoldings, marketCapAllocation, portfolioSummary]);
 
   const dynamicAlerts = useMemo(() => {
     const alertsList = [];
@@ -147,26 +167,56 @@ export default function AiInsightsPage() {
   }, [displayHoldings, allocation, marketCapAllocation]);
 
   const forecastData = useMemo(() => {
-    if (!displayHoldings.length) return null;
+    // If no portfolio or history, fallback to simple static structure
+    if (!portfolioSummary || !portfolioSummary.currentValue) {
+      const baseValue = 100;
+      return [
+        { day: "W1", portfolio: baseValue, forecast: null },
+        { day: "W2", portfolio: baseValue + 2.1, forecast: null },
+        { day: "W3", portfolio: baseValue + 4.5, forecast: null },
+        { day: "Next", portfolio: null, forecast: baseValue + 6 },
+        { day: "Next+1", portfolio: null, forecast: baseValue + 8 },
+        { day: "Next+2", portfolio: null, forecast: baseValue + 10 },
+      ];
+    }
     
-    // Simple projection logic: take current performance and project 3 steps forward
-    const baseValue = 100;
-    const history = [
-      { day: "W1", portfolio: baseValue, forecast: null },
-      { day: "W2", portfolio: baseValue + 2.1, forecast: null },
-      { day: "W3", portfolio: baseValue + 4.5, forecast: null },
-    ];
+    const baseValue = portfolioSummary.currentValue;
+    const volatility = riskScoreData.score < 40 ? 0.04 : (riskScoreData.score > 70 ? 0.015 : 0.025);
     
-    const lastVal = history[history.length - 1].portfolio;
-    const volatility = riskScoreData.score < 40 ? 4 : 1.5;
+    // Create history based on market benchmark if available, otherwise synthetic
+    let history = [];
+    if (marketHistory && marketHistory.length >= 3) {
+      // Map market history returns to portfolio
+      const latestMarket = marketHistory[marketHistory.length - 1][4]; // Close price
+      history = marketHistory.slice(-3).map((candle, idx) => {
+        const ratio = candle[4] / latestMarket;
+        return { 
+          day: `W${idx+1}`, 
+          portfolio: parseFloat((baseValue * ratio).toFixed(2)), 
+          forecast: null 
+        };
+      });
+    } else {
+      history = [
+        { day: "W1", portfolio: baseValue * 0.96, forecast: null },
+        { day: "W2", portfolio: baseValue * 0.98, forecast: null },
+        { day: "W3", portfolio: baseValue, forecast: null },
+      ];
+    }
+    
+    // Ensure the last history point connects to the first forecast point
+    const lastVal = baseValue; 
+    
+    // Adjust projection upward or downward slightly based on risk score (higher risk = higher potential volatility)
+    const baseProjectedReturn = portfolioSummary.totalReturns > 0 ? volatility : (volatility * 0.5);
     
     return [
       ...history,
-      { day: "Next", portfolio: null, forecast: lastVal + volatility },
-      { day: "Next+1", portfolio: null, forecast: lastVal + volatility * 1.8 },
-      { day: "Next+2", portfolio: null, forecast: lastVal + volatility * 2.5 },
+      { day: "Next Wk", portfolio: null, forecast: parseFloat((lastVal * (1 + baseProjectedReturn)).toFixed(2)) },
+      { day: "Next Mth", portfolio: null, forecast: parseFloat((lastVal * (1 + baseProjectedReturn * 2)).toFixed(2)) },
+      { day: "Next Qtr", portfolio: null, forecast: parseFloat((lastVal * (1 + baseProjectedReturn * 4)).toFixed(2)) },
     ];
-  }, [displayHoldings, riskScoreData.score]);
+  }, [portfolioSummary, marketHistory, riskScoreData.score]);
 
   return (
     <AppShell>
@@ -190,7 +240,7 @@ export default function AiInsightsPage() {
             title="Volatility + diversification score"
             action={<BrainCircuit className="text-ai" />}
           />
-          <div className="relative mx-auto grid h-56 w-56 place-items-center rounded-full border-[18px] border-white/5 bg-white/[0.02]">
+          <div className="relative mx-auto mt-4 grid h-56 w-56 place-items-center rounded-full border-[18px] border-white/5 bg-white/[0.02]">
             {/* Dynamic gauge ring */}
             <div 
               className="absolute inset-[-18px] rounded-full border-[18px] border-transparent transition-all duration-1000" 
@@ -206,6 +256,16 @@ export default function AiInsightsPage() {
                 {riskScoreData.label}
               </p>
             </div>
+          </div>
+          
+          <div className="mt-8 space-y-2">
+            <p className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Live Calculation Factors</p>
+            {riskScoreData.factors?.map((f, i) => (
+              <div key={i} className="flex justify-between items-center text-sm">
+                <span className="text-slate-300">{f.name}</span>
+                <span className={`font-mono font-medium ${f.impact.startsWith('+') ? 'text-profit' : 'text-loss'}`}>{f.impact}</span>
+              </div>
+            ))}
           </div>
 
         </GlassCard>

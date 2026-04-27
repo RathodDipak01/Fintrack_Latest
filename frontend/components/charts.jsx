@@ -289,7 +289,7 @@ export function ForecastChart({ data }) {
           stroke="#94A3B8"
           tickLine={false}
           axisLine={false}
-          domain={[108, 126]}
+          domain={['auto', 'auto']}
         />
         <Tooltip contentStyle={tooltipStyle} />
         <Area
