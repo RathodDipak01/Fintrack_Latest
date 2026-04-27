@@ -211,9 +211,10 @@ DATA:
 
 TASK:
 Write a professional, 3-paragraph strategy report.
-1. Resolve any conflicts (e.g., if Prophet is bullish but sentiment is negative, explain why).
-2. Provide a clear reasoning for the current market state.
-3. Conclude with a tactical recommendation (Buy/Hold/Trim).`;
+1. The VERY FIRST LINE of your response MUST BE EXACTLY one of these three: "FINAL SIGNAL: BUY", "FINAL SIGNAL: SELL", or "FINAL SIGNAL: HOLD".
+2. After a blank line, resolve any conflicts (e.g., if Prophet is bullish but sentiment is negative, explain why).
+3. Provide a clear reasoning for the current market state.
+4. Conclude with a tactical recommendation.`;
 
   try {
     const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent", {

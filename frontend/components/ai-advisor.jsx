@@ -11,6 +11,7 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
   const [horizon, setHorizon] = useState("Medium Term");
   const [analysis, setAnalysis] = useState("");
   const [rawData, setRawData] = useState(null);
+  const [finalSignal, setFinalSignal] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [source, setSource] = useState("");
   const [targetSymbol, setTargetSymbol] = useState(() => {
@@ -27,12 +28,14 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
   useEffect(() => {
     setAnalysis("");
     setRawData(null);
+    setFinalSignal(null);
   }, [targetSymbol]);
 
   const generateDeepAnalysis = async () => {
     setIsGenerating(true);
     setAnalysis("");
     setRawData(null);
+    setFinalSignal(null);
     try {
       if (!targetSymbol) {
         throw new Error("Please select a holding to analyze.");
@@ -42,7 +45,20 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
       
       if (data) {
         setRawData(data.raw_data);
-        setAnalysis(data.analysis || "");
+        
+        let fullText = data.analysis || "";
+        let extractedSignal = null;
+        
+        // Extract "FINAL SIGNAL: [X]" from the top of the text
+        const lines = fullText.split('\n');
+        const firstLine = lines.find(l => l.trim() !== "");
+        if (firstLine && firstLine.toUpperCase().includes("FINAL SIGNAL:")) {
+          extractedSignal = firstLine.toUpperCase().split("FINAL SIGNAL:")[1].replace(/\*/g, "").trim();
+          fullText = lines.filter(l => !l.toUpperCase().includes("FINAL SIGNAL:")).join("\n").trim();
+        }
+
+        setFinalSignal(extractedSignal);
+        setAnalysis(fullText);
         setSource("gemini");
       }
     } catch (err) {
@@ -368,10 +384,21 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
                   </div>
                 )}
                 
-                <h3 className="text-lg font-black text-white uppercase tracking-widest mb-6 pb-4 border-b border-white/10 flex items-center gap-3">
-                  <BrainCircuit className="text-ai" size={24} />
-                  Synthesis & Strategy
-                </h3>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                  <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-3">
+                    <BrainCircuit className="text-ai" size={24} />
+                    Synthesis & Strategy
+                  </h3>
+                  {finalSignal && (
+                    <div className={`px-4 py-1.5 rounded-full text-sm font-black tracking-widest border ${
+                      finalSignal.includes('BUY') ? 'bg-profit/10 text-profit border-profit/20 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 
+                      finalSignal.includes('SELL') || finalSignal.includes('TRIM') ? 'bg-loss/10 text-loss border-loss/20 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 
+                      'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      ACTION: {finalSignal}
+                    </div>
+                  )}
+                </div>
                 {formatText(analysis)}
               </div>
             )}
