@@ -19,18 +19,23 @@ export async function syncGrowwHoldings(accessToken = null) {
   }
 
   try {
+    // Sanitize and validate token to prevent ByteString crash
+    const cleanToken = token.replace(/[\u2026\u200B]/g, "..."); // replace ellipsis with standard dots to check
+    if (cleanToken.includes("...") || cleanToken.length < 100) {
+      throw new Error("Invalid Access Token: It looks like you copied a truncated token. In the Network tab, please RIGHT-CLICK the Authorization value and select 'Copy Value' to get the full token.");
+    }
+    
     // Groww 2026 Authentication Pattern:
     // 1. Authorization: Bearer <JWT_TOKEN>
     // 2. X-API-KEY: <IDENTIFIER>
     // 3. X-API-SECRET: <SECRET>
     
     const headers = {
-      "Authorization": `Bearer ${token}`,
-      "X-API-KEY": env.growwApiKey.length < 100 ? env.growwApiKey : "GROWW_WEB_CLIENT",
-      "X-API-SECRET": env.growwApiSecret,
+      "Authorization": `Bearer ${cleanToken}`,
+      "X-API-VERSION": "1.0",
       "Content-Type": "application/json",
       "Accept": "application/json",
-      "User-Agent": "Fintrack-Portfolio-Manager/1.0"
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     };
 
     console.log("Groww Sync Attempt - Headers prepared (Secret masked)");
@@ -44,7 +49,7 @@ export async function syncGrowwHoldings(accessToken = null) {
       console.error(`Groww API Error (${response.status}):`, errorText);
       
       if (response.status === 403) {
-        throw new Error("Groww Sync Failed (403 Forbidden). This is usually due to IP Whitelisting. Please ensure your current IP is allowed in the Groww Developer Portal.");
+        throw new Error("Groww Sync Failed (403 Forbidden). Your Access Token has likely expired or is being blocked by Cloudflare. Please provide a fresh token.");
       }
       throw new Error(`Groww API responded with status ${response.status}`);
     }

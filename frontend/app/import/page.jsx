@@ -30,6 +30,9 @@ export default function ImportPortfolioPage() {
   const [connections, setConnections] = useState([]);
   const [showAngelModal, setShowAngelModal] = useState(false);
   const [angelCreds, setAngelCreds] = useState({ clientId: "", password: "", totpSecret: "", apiKey: "" });
+  
+  const [showGrowwModal, setShowGrowwModal] = useState(false);
+  const [growwToken, setGrowwToken] = useState("");
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -105,6 +108,10 @@ export default function ImportPortfolioPage() {
       setShowAngelModal(true);
       return;
     }
+    if (brokerId === "groww") {
+      setShowGrowwModal(true);
+      return;
+    }
     
     setBrokerLoading(brokerId);
     setBrokerStatus(null);
@@ -112,7 +119,6 @@ export default function ImportPortfolioPage() {
       let data;
       if (brokerId === "zerodha") data = await fintrackApi.syncZerodha();
       else if (brokerId === "upstox") data = await fintrackApi.syncUpstox();
-      else if (brokerId === "groww") data = await fintrackApi.syncGroww();
 
       if (data && data.loginUrl) {
         setBrokerStatus("Redirecting to broker login...");
@@ -136,6 +142,23 @@ export default function ImportPortfolioPage() {
     setBrokerStatus(null);
     try {
       const data = await fintrackApi.syncAngelOne(angelCreds);
+      
+      setBrokerStatus(data?.message || "Portfolio synced successfully!");
+      fetchConnections();
+    } catch (e) {
+      setBrokerStatus(e.message || "Broker sync failed.");
+    } finally {
+      setBrokerLoading(null);
+    }
+  };
+
+  const handleGrowwSubmit = async (e) => {
+    e.preventDefault();
+    setShowGrowwModal(false);
+    setBrokerLoading("groww");
+    setBrokerStatus(null);
+    try {
+      const data = await fintrackApi.syncGroww(growwToken);
       
       setBrokerStatus(data?.message || "Portfolio synced successfully!");
       fetchConnections();
@@ -399,6 +422,50 @@ export default function ImportPortfolioPage() {
                 className="mt-6 w-full rounded-lg bg-ai py-2.5 font-semibold text-white shadow-glow transition hover:bg-ai/90"
               >
                 Connect Account
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Groww Modal */}
+      {showGrowwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative my-8">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Connect Groww</h2>
+              <button onClick={() => setShowGrowwModal(false)} className="text-slate-400 hover:text-white transition">
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            <div className="mb-6 rounded-lg border border-ai/20 bg-ai/5 p-4 text-sm text-slate-300">
+              <p className="font-semibold text-ai mb-2">How to get your Access Token:</p>
+              <ol className="list-decimal pl-4 space-y-1.5 text-xs text-slate-400">
+                <li>Log in to your account at <a href="https://groww.in/" target="_blank" rel="noopener noreferrer" className="text-white hover:underline font-medium">Groww Web</a>.</li>
+                <li>Click on your <strong>Profile Icon</strong> at the top right, then select the <strong>Settings</strong> icon.</li>
+                <li>In the left navigation list, select <strong>Trading APIs</strong>.</li>
+                <li>Click on <strong>Generate API keys</strong> and select <strong>Access Token</strong>.</li>
+                <li>Copy the generated token and paste it here (Valid until 6 AM daily).</li>
+              </ol>
+            </div>
+            <form onSubmit={handleGrowwSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">Access Token *</label>
+                <textarea 
+                  required
+                  rows={4}
+                  value={growwToken}
+                  onChange={e => setGrowwToken(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-mono text-white outline-none transition focus:border-ai"
+                  placeholder="eyJraWQiOiJaTUtjVXciLCJhbGciOiJ..."
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="mt-6 w-full rounded-lg bg-ai py-2.5 font-semibold text-white shadow-glow transition hover:bg-ai/90"
+              >
+                Connect Groww
               </button>
             </form>
           </div>
