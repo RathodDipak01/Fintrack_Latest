@@ -33,7 +33,7 @@ const nav = [
   { label: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "portfolio", href: "/portfolio", icon: Wallet },
   { label: "import_data", href: "/import", icon: FileUp },
-  { label: "ai_insights", href: "/ai-insights", icon: Cpu },
+  { label: "ml_strategy", href: "/ai-insights", icon: Cpu },
   { label: "stocks", href: "/stocks", icon: TrendingUp },
   { label: "alerts", href: "/alerts", icon: Bell },
   { label: "watchlist", href: "/watchlist", icon: Eye },

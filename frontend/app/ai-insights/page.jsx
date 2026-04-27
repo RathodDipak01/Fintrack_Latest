@@ -145,41 +145,66 @@ export default function AiInsightsPage() {
     return { score: finalScore, label, tone, factors };
   }, [displayHoldings, marketCapAllocation, portfolioSummary]);
 
-  const dynamicAlerts = useMemo(() => {
-    const alertsList = [];
+  const riskContributors = useMemo(() => {
+    if (!displayHoldings.length) return [];
     
-    if (displayHoldings.length === 0) return [];
+    // Calculate weights
+    const totalValue = displayHoldings.reduce((sum, h) => sum + (h.qty * (h.currentPrice || h.avgCost || 0)), 0);
+    if (totalValue === 0) return [];
+    
+    const withRisk = displayHoldings.map(h => {
+      const val = h.qty * (h.currentPrice || h.avgCost || 0);
+      const weight = val / totalValue;
+      const cap = getMarketCap(h.symbol);
+      const capVolatility = cap === "Small cap" ? 1.8 : (cap === "Mid cap" ? 1.3 : 0.9);
+      const riskContribution = weight * capVolatility;
+      
+      return {
+        ...h,
+        weight: (weight * 100).toFixed(1),
+        riskContribution,
+        cap
+      };
+    });
+    
+    return withRisk.sort((a, b) => b.riskContribution - a.riskContribution).slice(0, 4);
+  }, [displayHoldings]);
 
-    // 1. Diversification Alert
-    if (displayHoldings.length < 5) {
-      alertsList.push({ title: "Portfolio is highly concentrated", type: "DIVERSIFICATION", tone: "loss" });
-    }
-
-    // 2. Sector Concentration
+  const hedgingSuggestions = useMemo(() => {
+    if (!displayHoldings.length) return [];
+    const suggestions = [];
+    
     const topSector = allocation[0];
-    if (topSector && topSector.value > 40) {
-      alertsList.push({ title: `High exposure to ${topSector.name} sector`, type: "CONCENTRATION", tone: "warn" });
+    if (topSector && topSector.value > 30) {
+      suggestions.push({
+        type: "Sector Hedge",
+        title: `Hedge against ${topSector.name} downturn`,
+        description: `Your portfolio is heavily weighted (${topSector.value}%) in ${topSector.name}. Our ML models suggest adding defensive ETFs or inverse-correlated assets to protect against sector-specific pullbacks.`,
+        action: "Explore Sector Hedges"
+      });
     }
 
-    // 3. Small cap risk
     const smallCap = marketCapAllocation.find(c => c.name === "Small cap")?.value || 0;
-    if (smallCap > 35) {
-      alertsList.push({ title: "Small-cap exposure is above 35%", type: "RISK", tone: "warn" });
+    if (smallCap > 25) {
+      suggestions.push({
+        type: "Volatility Hedge",
+        title: "High Small-Cap Volatility",
+        description: `Small-cap exposure is at ${smallCap}%. In bear markets, these suffer the most. Adding Large-Cap Value or Gold ETFs can dramatically improve your Sharpe ratio.`,
+        action: "View Stability Assets"
+      });
+    }
+    
+    if (suggestions.length === 0) {
+      suggestions.push({
+        type: "General Protection",
+        title: "Standard Market Hedge",
+        description: "Your portfolio is well-balanced. Our ML optimizer suggests holding 5-10% in liquid cash or bonds to deploy during opportunistic market corrections.",
+        action: "View Bond ETFs"
+      });
     }
 
-    // 4. Large cap anchor
-    const largeCap = marketCapAllocation.find(c => c.name === "Large cap")?.value || 0;
-    if (largeCap < 30) {
-      alertsList.push({ title: "Low allocation to Large-cap 'anchors'", type: "STABILITY", tone: "loss" });
-    }
-
-    // Fallback if no specific alerts
-    if (alertsList.length === 0) {
-      alertsList.push({ title: "Portfolio metrics look healthy", type: "STABILITY", tone: "profit" });
-    }
-
-    return alertsList;
-  }, [displayHoldings, allocation, marketCapAllocation]);
+    return suggestions;
+  }, [allocation, marketCapAllocation, displayHoldings]);
 
   const forecastData = useMemo(() => {
     // If no portfolio or history, fallback to simple static structure
@@ -237,14 +262,13 @@ export default function AiInsightsPage() {
     <AppShell>
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-ai">
-          AI Insights
+          ML Strategy
         </p>
         <h1 className="mt-2 text-3xl font-bold text-white md:text-5xl">
-          Risk, signals and forecast
+          Risk, Quant & Forecast
         </h1>
         <p className="mt-4 max-w-3xl text-slate-400">
-          Gemini-ready recommendations, concentration warnings and signal
-          confidence for beginner and intermediate investors.
+          Machine Learning models for portfolio projection, dynamic risk contribution, and smart hedging strategies.
         </p>
       </div>
 
@@ -304,86 +328,80 @@ export default function AiInsightsPage() {
 
       <GlassCard className="p-6">
         <SectionHeader
-          eyebrow="Signals"
-          title="Recommendation stance and confidence"
+          eyebrow="Quant Analysis"
+          title="Top Volatility Contributors"
+          action={<ShieldAlert className="text-warn" />}
         />
-        
-        <div className="mb-6 flex items-center gap-3">
-          <div className="relative max-w-sm w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            <input 
-              type="text" 
-              placeholder="Enter stock symbol (e.g. TCS)"
-              value={newSymbol}
-              onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-              className="w-full rounded-md border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-ai focus:outline-none focus:ring-1 focus:ring-ai uppercase"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && newSymbol) handleAddSignal();
-              }}
-            />
-          </div>
-          <button 
-            onClick={handleAddSignal}
-            disabled={!newSymbol || isLoadingSignal}
-            className="flex items-center gap-2 rounded-md bg-ai px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-ai/80 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoadingSignal ? <Loader2 size={16} className="animate-spin" /> : "Get Signal"}
-          </button>
-        </div>
-
-        {signals.length === 0 && !isLoadingSignal && (
-          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-8 text-center text-slate-500 text-sm">
-            Enter a stock symbol above to generate a real-time AI signal based on latest news.
-          </div>
-        )}
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {signals.map((signal) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
+          {riskContributors.map((holding) => (
             <div
-              key={signal.symbol}
-              className="rounded-lg border border-white/10 bg-white/[0.035] p-4 relative overflow-hidden"
+              key={holding.symbol}
+              className="rounded-xl border border-white/10 bg-white/[0.035] p-5 relative overflow-hidden group hover:border-white/20 transition-all"
             >
-              <div className="flex items-center justify-between">
-                <strong className="text-white">{signal.symbol}</strong>
-                <Pill tone={signal.signal === "Bearish" ? "loss" : signal.signal === "Neutral" ? "warn" : "profit"}>
-                  {signal.signal}
-                </Pill>
+              <div className="flex items-center justify-between mb-2">
+                <strong className="text-lg text-white">{holding.symbol}</strong>
+                <span className="text-xs font-bold text-loss bg-loss/10 px-2 py-1 rounded">
+                  High Impact
+                </span>
               </div>
-              <div className="mt-5 h-2 rounded-full bg-white/10">
-                <div
-                  className={`h-full rounded-full ${signal.signal === "Bearish" ? "bg-loss" : signal.signal === "Neutral" ? "bg-warn" : "bg-profit"}`}
-                  style={{ width: `${signal.confidence}%` }}
-                />
+              <p className="text-xs text-slate-400 mb-4">{holding.name}</p>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-500">Portfolio Weight</span>
+                    <span className="text-white font-mono">{holding.weight}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-slate-500 rounded-full" style={{ width: `${Math.min(holding.weight, 100)}%` }} />
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-500">Risk Contribution</span>
+                    <span className="text-loss font-mono">{(holding.riskContribution * 10).toFixed(1)}x</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-loss rounded-full" style={{ width: `${Math.min(holding.riskContribution * 20, 100)}%` }} />
+                  </div>
+                </div>
               </div>
-              <p className="mt-3 text-sm font-semibold text-white">
-                {signal.confidence}% confidence
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                {signal.note}
-              </p>
             </div>
           ))}
+          {riskContributors.length === 0 && (
+            <div className="col-span-full rounded-lg border border-white/5 bg-white/[0.02] p-8 text-center text-slate-500 text-sm">
+              Add holdings to your portfolio to see risk contributions.
+            </div>
+          )}
         </div>
       </GlassCard>
 
-      <GlassCard className="p-6">
+      <GlassCard className="p-6 mt-5">
         <SectionHeader
-          eyebrow="Warnings"
-          title="What needs attention"
-          action={<ShieldAlert className="text-warn" />}
+          eyebrow="ML Optimization"
+          title="Smart Hedging Strategies"
+          action={<Sparkles className="text-ai" />}
         />
-        <div className="grid gap-3 md:grid-cols-3">
-          {dynamicAlerts.map((alert) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
+          {hedgingSuggestions.map((hedge, idx) => (
             <div
-              key={alert.title}
-              className="rounded-lg border border-white/10 bg-white/[0.035] p-4"
+              key={idx}
+              className="rounded-xl border border-ai/20 bg-ai/5 p-5 relative flex flex-col"
             >
-              <Pill tone={alert.tone}>{alert.type}</Pill>
-              <p className="mt-4 font-semibold text-white">{alert.title}</p>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-ai/10 px-3 py-1.5 text-xs font-bold text-ai w-fit">
+                {hedge.type}
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">{hedge.title}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed flex-1">
+                {hedge.description}
+              </p>
+              <button className="mt-6 w-full rounded-lg border border-ai/30 bg-transparent px-4 py-2 text-sm font-semibold text-ai transition hover:bg-ai/10">
+                {hedge.action}
+              </button>
             </div>
           ))}
         </div>
-
       </GlassCard>
     </AppShell>
   );
