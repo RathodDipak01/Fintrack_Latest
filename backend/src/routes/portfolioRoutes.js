@@ -55,7 +55,11 @@ portfolioRouter.get("/allocation", async (req, res) => {
     // Group by sector
     const sectorGroups = holdings.reduce((acc, h) => {
       const val = h.qty * (h.currentPrice || h.avgCost);
-      const sector = h.sector || "Diversified";
+      // Use getSector if h.sector is missing or generic 'Diversified'
+      let sector = h.sector;
+      if (!sector || sector === "Diversified" || sector === "General") {
+        sector = getSector(h.symbol);
+      }
       acc[sector] = (acc[sector] || 0) + val;
       return acc;
     }, {});
@@ -126,8 +130,13 @@ portfolioRouter.get("/holdings", async (req, res) => {
     
     // Add computed metrics and enrich sector on the fly
     const enrichedHoldings = userHoldings.map(h => {
+      let sector = h.sector;
+      if (!sector || sector === "Diversified" || sector === "General") {
+        sector = getSector(h.symbol);
+      }
       return {
         ...h,
+        sector,
         changePercent: h.currentPrice ? (((h.currentPrice - h.avgCost) / h.avgCost) * 100).toFixed(2) : 0,
         pnl: h.currentPrice ? ((h.currentPrice - h.avgCost) * h.qty).toFixed(2) : 0
       };
