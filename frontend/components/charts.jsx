@@ -113,7 +113,8 @@ export function DonutChart({ data, innerData, title = "Allocation", onItemClick,
   const [clickedItem, setClickedItem] = useState(null);
   const chartRef = useRef(null);
   
-  const chartData = data && data.length > 0 ? data : allocationData;
+  const chartData = data || [];
+
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -182,84 +183,95 @@ export function DonutChart({ data, innerData, title = "Allocation", onItemClick,
         )}
       </div>
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          {innerData && (
+        {chartData.length > 0 ? (
+          <PieChart>
+            {innerData && (
+              <Pie
+                data={innerData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={45}
+                outerRadius={65}
+                paddingAngle={2}
+                stroke="none"
+                isAnimationActive={true}
+                onMouseEnter={onInnerPieEnter}
+                onMouseLeave={onInnerPieLeave}
+                onTouchStart={onInnerPieEnter}
+                onClick={handleInnerClick}
+              >
+                {innerData.map((entry, index) => (
+                  <Cell 
+                    key={entry.name} 
+                    fill={entry.color || ['#4F46E5', '#818CF8', '#C7D2FE'][index % 3]} 
+                    className="transition-all duration-300 ease-out origin-center hover:opacity-80"
+                    style={{
+                      transform: activeInnerIndex === index ? 'scale(1.05)' : 'scale(1)'
+                    }}
+                  />
+                ))}
+              </Pie>
+            )}
             <Pie
-              data={innerData}
+              data={chartData}
               dataKey="value"
               nameKey="name"
-              innerRadius={45}
-              outerRadius={65}
+              innerRadius={innerData ? 75 : 65}
+              outerRadius={innerData ? 95 : 92}
               paddingAngle={2}
               stroke="none"
               isAnimationActive={true}
-              onMouseEnter={onInnerPieEnter}
-              onMouseLeave={onInnerPieLeave}
-              onTouchStart={onInnerPieEnter}
-              onClick={handleInnerClick}
+              onClick={handleOuterClick}
+              onMouseEnter={onPieEnter}
+              onMouseLeave={onPieLeave}
+              onTouchStart={onPieEnter}
             >
-              {innerData.map((entry, index) => (
-                <Cell 
-                  key={entry.name} 
-                  fill={entry.color || ['#4F46E5', '#818CF8', '#C7D2FE'][index % 3]} 
-                  className="transition-all duration-300 ease-out origin-center hover:opacity-80"
-                  style={{
-                    transform: activeInnerIndex === index ? 'scale(1.05)' : 'scale(1)'
-                  }}
-                />
-              ))}
+              {chartData.map((entry, index) => {
+                const isInnerHovered = innerData && activeInnerIndex >= 0;
+                const matchesInner = isInnerHovered && entry.category === innerData[activeInnerIndex].name;
+                
+                // External Highlight Logic
+                const isHighlighted = highlightCriteria && entry[highlightKey] === highlightCriteria;
+                
+                const shouldPopOut = activeIndex === index || matchesInner || isHighlighted;
+                
+                // If there's an external highlight, dim others unless they are hovered
+                const hasHighlightMode = !!highlightCriteria;
+                const opacity = (isInnerHovered && !matchesInner) || (hasHighlightMode && !isHighlighted && activeIndex !== index) ? 0.25 : 1;
+                
+                return (
+                  <Cell 
+                    key={entry.name} 
+                    fill={entry.color || COLORS[index % COLORS.length]} 
+                    className="transition-all duration-300 ease-out origin-center"
+                    style={{
+                      transform: shouldPopOut ? 'scale(1.08)' : 'scale(1)',
+                      opacity: opacity
+                    }}
+                  />
+                );
+              })}
             </Pie>
-          )}
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={innerData ? 75 : 65}
-            outerRadius={innerData ? 95 : 92}
-            paddingAngle={2}
-            stroke="none"
-            isAnimationActive={true}
-            onClick={handleOuterClick}
-            onMouseEnter={onPieEnter}
-            onMouseLeave={onPieLeave}
-            onTouchStart={onPieEnter}
-          >
-            {chartData.map((entry, index) => {
-              const isInnerHovered = innerData && activeInnerIndex >= 0;
-              const matchesInner = isInnerHovered && entry.category === innerData[activeInnerIndex].name;
-              
-              // External Highlight Logic
-              const isHighlighted = highlightCriteria && entry[highlightKey] === highlightCriteria;
-              
-              const shouldPopOut = activeIndex === index || matchesInner || isHighlighted;
-              
-              // If there's an external highlight, dim others unless they are hovered
-              const hasHighlightMode = !!highlightCriteria;
-              const opacity = (isInnerHovered && !matchesInner) || (hasHighlightMode && !isHighlighted && activeIndex !== index) ? 0.25 : 1;
-              
-              return (
-                <Cell 
-                  key={entry.name} 
-                  fill={entry.color || COLORS[index % COLORS.length]} 
-                  className="transition-all duration-300 ease-out origin-center"
-                  style={{
-                    transform: shouldPopOut ? 'scale(1.08)' : 'scale(1)',
-                    opacity: opacity
-                  }}
-                />
-              );
-            })}
-          </Pie>
-        </PieChart>
+          </PieChart>
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <div className="h-32 w-32 rounded-full border border-dashed border-white/10 flex items-center justify-center text-[10px] text-slate-600 font-medium uppercase tracking-tighter">
+              No Data
+            </div>
+          </div>
+        )}
       </ResponsiveContainer>
+
     </div>
   );
 }
 
-export function ForecastChart() {
+export function ForecastChart({ data }) {
+  const chartData = data || performanceData;
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={performanceData} className="chart-grid">
+      <AreaChart data={chartData} className="chart-grid">
+
         <defs>
           <linearGradient id="forecast" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.5} />

@@ -58,7 +58,8 @@ import { useSettings } from "@/context/settings-context";
 
 const tabs = ["7D", "1M", "3M", "1Y"];
 
-function Hero({ summary, isPrivate, onTogglePrivacy, performance }) {
+function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] }) {
+
   const { formatCurrency, t } = useSettings();
   
   const netWorth = summary?.currentValue || 0;
@@ -95,17 +96,28 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance }) {
               </span>
             </div>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
-              {isUp 
+              {holdings.length === 0 
+                ? "Start by importing your portfolio from your broker or a CSV file to get AI-powered insights and real-time tracking."
+                : isUp 
                 ? "Your portfolio is beating the benchmark. Returns are well distributed across sectors."
                 : "Your portfolio is currently underperforming the benchmark. Consider reviewing sector weights."}
             </p>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <Sparkline />
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-slate-400">5-day momentum</span>
-              <span className="font-semibold text-profit">Strong</span>
-            </div>
+            {holdings.length > 0 ? (
+              <>
+                <Sparkline />
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-slate-400">5-day momentum</span>
+                  <span className="font-semibold text-profit">Strong</span>
+                </div>
+              </>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center py-6">
+                <LineChart className="text-slate-600 mb-2" size={24} />
+                <p className="text-xs text-slate-500">No data to plot</p>
+              </div>
+            )}
           </div>
         </div>
       </GlassCard>
@@ -116,34 +128,39 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance }) {
             <div>
               <p className="text-sm text-slate-400">AI Insights</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">
-                Moderately risky
+                {holdings.length === 0 ? "No data" : "Moderately risky"}
               </h2>
             </div>
             <BrainCircuit className="text-ai" size={30} />
           </div>
           <div className="mt-6 space-y-4">
-            {[
-              "Expected growth next week: +3.2%",
-              "Overexposed to IT sector",
-              "Downside risk reduced by banking allocation",
-            ].map((item, index) => (
-              <motion.div
-                key={item}
-                initial={{ opacity: 0, x: 14 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.18 + index * 0.08 }}
-                className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3"
-              >
-                <Sparkles
-                  size={18}
-                  className={index === 1 ? "text-warn" : "text-ai"}
-                />
-                <span className="text-sm text-slate-200">{item}</span>
-              </motion.div>
-            ))}
+            {holdings.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">Connect a broker to see AI-powered risk analysis and growth forecasts.</p>
+            ) : (
+              [
+                "Expected growth next week: +3.2%",
+                "Overexposed to IT sector",
+                "Downside risk reduced by banking allocation",
+              ].map((item, index) => (
+                <motion.div
+                  key={item}
+                  initial={{ opacity: 0, x: 14 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.18 + index * 0.08 }}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3"
+                >
+                  <Sparkles
+                    size={18}
+                    className={index === 1 ? "text-warn" : "text-ai"}
+                  />
+                  <span className="text-sm text-slate-200">{item}</span>
+                </motion.div>
+              ))
+            )}
           </div>
         </GlassCard>
       </FeatureGuard>
+
     </section>
   );
 }
@@ -263,7 +280,8 @@ function Stats({ summary, isPrivate, onTogglePrivacy, diversificationResult, per
   );
 }
 
-function Performance() {
+function Performance({ holdings = [] }) {
+
   return (
     <GlassCard className="p-6">
       <SectionHeader
@@ -283,8 +301,16 @@ function Performance() {
         }
       />
 
-      <PerformanceChart />
+      {holdings.length > 0 ? (
+        <PerformanceChart />
+      ) : (
+        <div className="h-[320px] w-full flex flex-col items-center justify-center text-center bg-white/[0.02] rounded-xl border border-dashed border-white/10">
+          <LineChart size={48} className="text-slate-700 mb-4" />
+          <p className="text-slate-400">Performance tracking will begin once you import your data.</p>
+        </div>
+      )}
     </GlassCard>
+
   );
 }
 
@@ -555,7 +581,14 @@ function AiInsights() {
             eyebrow="Forecast"
             title="Prophet-style growth projection"
           />
-          <ForecastChart />
+          {holdings.length > 0 ? (
+            <ForecastChart />
+          ) : (
+            <div className="h-[260px] w-full flex flex-col items-center justify-center text-center bg-white/[0.02] rounded-xl border border-dashed border-white/10">
+              <p className="text-sm text-slate-500">Projections will appear here after data import.</p>
+            </div>
+          )}
+
         </GlassCard>
       </FeatureGuard>
 
@@ -566,49 +599,57 @@ function AiInsights() {
             title="What the model thinks matters now"
           />
           <div className="grid gap-4 md:grid-cols-3">
-            {stockSignals.map((signal) => (
-              <div
-                key={signal.symbol}
-                className="group relative flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-all duration-300 hover:border-ai/40 hover:bg-white/[0.06] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-1"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h4 className="truncate text-lg font-bold tracking-tight text-white">{signal.symbol}</h4>
+            {holdings.length > 0 ? (
+              stockSignals.map((signal) => (
+                <div
+                  key={signal.symbol}
+                  className="group relative flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-all duration-300 hover:border-ai/40 hover:bg-white/[0.06] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:-translate-y-1"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-lg font-bold tracking-tight text-white">{signal.symbol}</h4>
+                      </div>
+                      <Pill tone={signal.signal === "Bullish" ? "profit" : signal.signal === "Bearish" ? "loss" : "neutral"}>
+                        {signal.signal}
+                      </Pill>
                     </div>
-                    <Pill tone={signal.signal === "Bullish" ? "profit" : signal.signal === "Bearish" ? "loss" : "neutral"}>
-                      {signal.signal}
-                    </Pill>
+                    
+                    <div className="mt-6">
+                      <div className="flex items-end justify-between mb-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Model Confidence</span>
+                        <span className="font-mono text-sm font-bold text-white">{signal.confidence}%</span>
+                      </div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/5 p-0.5 shadow-inner">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${signal.confidence}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          className={`h-full rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)] ${
+                            signal.signal === "Bullish" ? "bg-profit" : signal.signal === "Bearish" ? "bg-loss" : "bg-ai"
+                          }`}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="mt-6">
-                    <div className="flex items-end justify-between mb-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Model Confidence</span>
-                      <span className="font-mono text-sm font-bold text-white">{signal.confidence}%</span>
-                    </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/5 p-0.5 shadow-inner">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${signal.confidence}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className={`h-full rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)] ${
-                          signal.signal === "Bullish" ? "bg-profit" : signal.signal === "Bearish" ? "bg-loss" : "bg-ai"
-                        }`}
-                      />
-                    </div>
+
+                  <p className="mt-5 text-sm leading-relaxed text-slate-400 line-clamp-3">
+                    {signal.note}
+                  </p>
+
+                  <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Sparkles size={12} className="text-ai/50" />
                   </div>
                 </div>
-
-                <p className="mt-5 text-sm leading-relaxed text-slate-400 line-clamp-3">
-                  {signal.note}
-                </p>
-
-                <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Sparkles size={12} className="text-ai/50" />
-                </div>
+              ))
+            ) : (
+              <div className="md:col-span-3 py-12 text-center border border-dashed border-white/10 rounded-xl bg-white/[0.01]">
+                <Sparkles size={32} className="mx-auto text-slate-700 mb-4" />
+                <p className="text-slate-500">AI market signals are generated based on your portfolio composition.</p>
               </div>
-            ))}
+            )}
           </div>
+
         </GlassCard>
       </FeatureGuard>
     </section>
@@ -1199,8 +1240,9 @@ export default function Home() {
       totalInvestment,
       currentValue,
       totalReturns,
-      dayChange: totalReturns * 0.012, 
-      dayChangePercent: 1.2
+      dayChange: 0, 
+      dayChangePercent: 0
+
     };
   }, [holdings]);
 
@@ -1221,7 +1263,9 @@ export default function Home() {
         isPrivate={isPrivate}
         onTogglePrivacy={() => setIsPrivate(!isPrivate)}
         performance={portfolioPerformance}
+        holdings={holdings}
       />
+
       
       <Stats
         summary={filteredSummary}
@@ -1261,10 +1305,23 @@ export default function Home() {
           </div>
         </GlassCard>
         
-        <Performance />
+        <Performance holdings={holdings} />
+
       </section>
 
       <div className="mt-6">
+        <Portfolio 
+          holdings={holdings} 
+          allocation={allocation} 
+          isPrivate={isPrivate} 
+          stockAllocation={allocation} 
+          marketCapAllocation={marketCapAllocation} 
+          diversificationResult={diversificationResult} 
+        />
+      </div>
+
+      <div className="mt-6">
+
         <GeminiAdvisor 
           holdings={holdings} 
           allocation={allocation} 
