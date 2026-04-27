@@ -28,6 +28,8 @@ export default function ImportPortfolioPage() {
   const [brokerStatus, setBrokerStatus] = useState(null);
   const [brokerLoading, setBrokerLoading] = useState(null);
   const [connections, setConnections] = useState([]);
+  const [showAngelModal, setShowAngelModal] = useState(false);
+  const [angelCreds, setAngelCreds] = useState({ clientId: "", password: "", totpSecret: "", apiKey: "" });
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -99,12 +101,16 @@ export default function ImportPortfolioPage() {
   };
 
   const connectBroker = async (brokerId) => {
+    if (brokerId === "angel_one") {
+      setShowAngelModal(true);
+      return;
+    }
+    
     setBrokerLoading(brokerId);
     setBrokerStatus(null);
     try {
       let data;
-      if (brokerId === "angel_one") data = await fintrackApi.syncAngelOne();
-      else if (brokerId === "zerodha") data = await fintrackApi.syncZerodha();
+      if (brokerId === "zerodha") data = await fintrackApi.syncZerodha();
       else if (brokerId === "upstox") data = await fintrackApi.syncUpstox();
       else if (brokerId === "groww") data = await fintrackApi.syncGroww();
 
@@ -114,6 +120,23 @@ export default function ImportPortfolioPage() {
         return;
       }
 
+      setBrokerStatus(data?.message || "Portfolio synced successfully!");
+      fetchConnections();
+    } catch (e) {
+      setBrokerStatus(e.message || "Broker sync failed.");
+    } finally {
+      setBrokerLoading(null);
+    }
+  };
+
+  const handleAngelSubmit = async (e) => {
+    e.preventDefault();
+    setShowAngelModal(false);
+    setBrokerLoading("angel_one");
+    setBrokerStatus(null);
+    try {
+      const data = await fintrackApi.syncAngelOne(angelCreds);
+      
       setBrokerStatus(data?.message || "Portfolio synced successfully!");
       fetchConnections();
     } catch (e) {
@@ -304,6 +327,74 @@ export default function ImportPortfolioPage() {
           </div>
         )}
       </GlassCard>
+
+      {/* Angel One Modal */}
+      {showAngelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Connect Angel One</h2>
+              <button onClick={() => setShowAngelModal(false)} className="text-slate-400 hover:text-white transition">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAngelSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">Client ID *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={angelCreds.clientId}
+                  onChange={e => setAngelCreds({...angelCreds, clientId: e.target.value})}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white outline-none transition focus:border-ai"
+                  placeholder="e.g. D123456"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">Password / PIN *</label>
+                <input 
+                  type="password" 
+                  required
+                  value={angelCreds.password}
+                  onChange={e => setAngelCreds({...angelCreds, password: e.target.value})}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white outline-none transition focus:border-ai"
+                  placeholder="Your 4-digit PIN or Password"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">TOTP Secret *</label>
+                <input 
+                  type="password" 
+                  required
+                  value={angelCreds.totpSecret}
+                  onChange={e => setAngelCreds({...angelCreds, totpSecret: e.target.value})}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white outline-none transition focus:border-ai"
+                  placeholder="e.g. JGPGXIQNI..."
+                />
+                <p className="mt-1 text-xs text-slate-500">The 2FA secret used to generate TOTP from SmartAPI.</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-300">API Key *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={angelCreds.apiKey}
+                  onChange={e => setAngelCreds({...angelCreds, apiKey: e.target.value})}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white outline-none transition focus:border-ai"
+                  placeholder="Your SmartAPI Key"
+                />
+                <p className="mt-1 text-xs text-slate-500">API Key is required and must belong to your Client ID.</p>
+              </div>
+              <button 
+                type="submit" 
+                className="mt-6 w-full rounded-lg bg-ai py-2.5 font-semibold text-white shadow-glow transition hover:bg-ai/90"
+              >
+                Connect Account
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

@@ -52,7 +52,8 @@ async function performDatabaseSync(userId, holdings, source) {
  */
 router.post("/sync/angelone", requireAuth, async (req, res) => {
   try {
-    const holdings = await syncAngelOneHoldings();
+    const { clientId, password, totpSecret, apiKey } = req.body || {};
+    const holdings = await syncAngelOneHoldings({ clientId, password, totpSecret, apiKey });
     await performDatabaseSync(req.userId, holdings, "ANGEL_ONE");
     return ok(res, null, `Portfolio synced with Angel One (${holdings.length} holdings)`);
   } catch (err) {

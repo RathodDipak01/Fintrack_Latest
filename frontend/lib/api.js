@@ -95,8 +95,11 @@ export const fintrackApi = {
     fetchWithAuth(`/watchlist/${id}`, { method: "DELETE" }),
 
   // --- Broker Integration ---
-  syncAngelOne: () =>
-    fetchWithAuth("/broker/sync/angelone", { method: "POST" }),
+  syncAngelOne: (data) =>
+    fetchWithAuth("/broker/sync/angelone", { 
+      method: "POST", 
+      body: JSON.stringify(data) 
+    }),
   syncZerodha: (requestToken) =>
     fetchWithAuth("/broker/sync/zerodha", { 
       method: "POST", 

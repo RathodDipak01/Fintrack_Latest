@@ -5,21 +5,28 @@ import { env } from "../config/env.js";
 /**
  * Generates a session with Angel One using TOTP and fetches holdings.
  */
-export async function syncAngelOneHoldings() {
-  if (!env.angelClientId || !env.angelPassword || !env.angelTotpSecret || !env.angelApiKey) {
-    throw new Error("Angel One credentials (Client ID, Password, TOTP Secret, or API Key) are not configured.");
+export async function syncAngelOneHoldings(credentials = {}) {
+  const isCustom = Boolean(credentials.clientId || credentials.password || credentials.totpSecret || credentials.apiKey);
+  
+  const clientId = isCustom ? credentials.clientId : env.angelClientId;
+  const password = isCustom ? credentials.password : env.angelPassword;
+  const totpSecret = isCustom ? credentials.totpSecret : env.angelTotpSecret;
+  const apiKey = isCustom ? credentials.apiKey : env.angelApiKey;
+
+  if (!clientId || !password || !totpSecret || !apiKey) {
+    throw new Error("All Angel One credentials (Client ID, Password, TOTP Secret, and API Key) are required.");
   }
 
   const smartApi = new SmartAPI({
-    api_key: env.angelApiKey,
+    api_key: apiKey,
   });
 
   try {
-    const totp = generateSync({ secret: env.angelTotpSecret });
+    const totp = generateSync({ secret: totpSecret });
     
     const session = await smartApi.generateSession(
-      env.angelClientId,
-      env.angelPassword,
+      clientId,
+      password,
       totp
     );
 
