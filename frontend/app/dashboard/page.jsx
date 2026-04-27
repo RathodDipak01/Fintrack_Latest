@@ -66,6 +66,46 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] 
   const totalReturns = summary?.totalReturns || 0;
   const isUp = performance >= 0;
 
+  const dynamicInsights = useMemo(() => {
+    if (!holdings || holdings.length === 0) return [];
+    
+    const insights = [];
+    
+    // 1. Growth projection based on actual performance trend
+    const trend = isUp ? (performance * 0.12).toFixed(1) : (performance * 0.05).toFixed(1);
+    insights.push(`Expected growth next week: ${Number(trend) > 0 ? '+' : ''}${Math.max(Number(trend), -5)}%`);
+    
+    // 2. Sector exposure analysis
+    const sectors = holdings.reduce((acc, h) => {
+      acc[h.sector || "Diversified"] = (acc[h.sector || "Diversified"] || 0) + (h.qty * (h.currentPrice || h.avgCost));
+      return acc;
+    }, {});
+    
+    const sortedSectors = Object.entries(sectors).sort((a,b) => b[1] - a[1]);
+    if (sortedSectors.length > 0) {
+      const topSector = sortedSectors[0];
+      const totalVal = sortedSectors.reduce((s, [,v]) => s + v, 0);
+      const pct = (topSector[1] / totalVal) * 100;
+      
+      if (pct > 30) {
+        insights.push(`Overexposed to ${topSector[0]} (${pct.toFixed(0)}%)`);
+      } else {
+        insights.push(`Well balanced sector allocation`);
+      }
+    }
+    
+    // 3. Diversification
+    if (holdings.length < 5) {
+      insights.push(`High concentration risk (${holdings.length} stocks)`);
+    } else {
+      insights.push(`Risk distributed across ${holdings.length} assets`);
+    }
+    
+    return insights;
+  }, [holdings, performance, isUp]);
+
+  const riskLabel = holdings.length < 5 ? "High risk" : (performance < 0 ? "Moderately risky" : "Low risk");
+
   return (
     <section id="dashboard" className="grid gap-5 xl:grid-cols-[1.35fr_0.85fr]">
       <GlassCard className="relative overflow-hidden p-6 md:p-8">
@@ -109,7 +149,7 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] 
                 <Sparkline />
                 <div className="mt-3 flex items-center justify-between text-sm">
                   <span className="text-slate-400">5-day momentum</span>
-                  <span className="font-semibold text-profit">Strong</span>
+                  <span className={`font-semibold ${isUp ? 'text-profit' : 'text-loss'}`}>{isUp ? 'Strong' : 'Weak'}</span>
                 </div>
               </>
             ) : (
@@ -127,8 +167,8 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] 
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-slate-400">AI Insights</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                {holdings.length === 0 ? "No data" : "Moderately risky"}
+              <h2 className={`mt-2 text-2xl font-semibold ${riskLabel === 'High risk' ? 'text-loss' : riskLabel === 'Low risk' ? 'text-profit' : 'text-white'}`}>
+                {holdings.length === 0 ? "No data" : riskLabel}
               </h2>
             </div>
             <BrainCircuit className="text-ai" size={30} />
@@ -137,11 +177,7 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] 
             {holdings.length === 0 ? (
               <p className="text-sm text-slate-500 italic">Connect a broker to see AI-powered risk analysis and growth forecasts.</p>
             ) : (
-              [
-                "Expected growth next week: +3.2%",
-                "Overexposed to IT sector",
-                "Downside risk reduced by banking allocation",
-              ].map((item, index) => (
+              dynamicInsights.map((item, index) => (
                 <motion.div
                   key={item}
                   initial={{ opacity: 0, x: 14 }}
@@ -151,7 +187,7 @@ function Hero({ summary, isPrivate, onTogglePrivacy, performance, holdings = [] 
                 >
                   <Sparkles
                     size={18}
-                    className={index === 1 ? "text-warn" : "text-ai"}
+                    className={item.includes("Overexposed") || item.includes("High concentration") ? "text-loss" : "text-ai"}
                   />
                   <span className="text-sm text-slate-200">{item}</span>
                 </motion.div>
@@ -287,18 +323,6 @@ function Performance({ holdings = [], performanceData }) {
       <SectionHeader
         eyebrow="Performance"
         title="Portfolio vs NIFTY50"
-        action={
-          <div className="flex rounded-lg border border-white/10 bg-white/5 p-1">
-            {tabs.map((tab, index) => (
-              <button
-                key={tab}
-                className={`rounded-md px-3 py-2 text-sm ${index === 1 ? "bg-ai text-white" : "text-slate-400"}`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        }
       />
 
       {holdings.length > 0 ? (
