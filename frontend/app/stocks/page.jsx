@@ -379,11 +379,11 @@ export default function StocksPage() {
               ["HQ", growwData?.details?.headquarters || "N/A"],
               ["Industry", growwData?.header?.industryName || quote?.sector || "Equity"],
               ["Mkt Cap", growwData?.stats?.marketCap ? `₹${growwData.stats.marketCap.toLocaleString('en-IN')} Cr` : "N/A"],
-              ["Rank", growwData?.stats?.marketCapRank ? `#${growwData.stats.marketCapRank}` : "N/A"],
+              // ["Rank", growwData?.stats?.marketCapRank || growwData?.stats?.mktCapRank ? `#${growwData?.stats?.marketCapRank || growwData?.stats?.mktCapRank}` : "N/A"],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between items-center px-4 py-3 text-sm rounded-lg hover:bg-white/[0.04] transition-all border-b border-white/5 last:border-0">
-                <span className="text-slate-500 font-medium">{label}</span>
-                <span className="text-right font-bold text-white truncate max-w-[150px]">{value}</span>
+                <span className="text-slate-500 font-medium shrink-0">{label}</span>
+                <span className="text-right font-bold text-white pl-4">{value}</span>
               </div>
             ))}
           </div>
