@@ -91,6 +91,10 @@ function TopNav({ onNotifications }) {
     }
   }, []);
 
+  const displayAvatar = settings.user?.avatar && !settings.user.avatar.includes("api.dicebear.com") 
+    ? settings.user.avatar 
+    : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(settings.user?.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`;
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/78 backdrop-blur-xl">
       <div className="flex w-full items-center gap-3 px-4 md:px-8 py-4 sm:gap-4">
@@ -141,12 +145,11 @@ function TopNav({ onNotifications }) {
         )}
         <Link href="/profile" className="transition hover:opacity-80">
           <Image
-            src={settings.user.avatar}
-            alt={settings.user.name}
-            width={40}
-            height={40}
-            loading="eager"
-            className="rounded-lg border border-white/10 shadow-glow"
+            src={displayAvatar}
+            alt="Profile"
+            width={36}
+            height={36}
+            className="rounded-lg border border-ai/30 object-cover"
           />
         </Link>
       </div>

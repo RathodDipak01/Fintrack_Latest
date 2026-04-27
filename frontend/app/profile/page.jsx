@@ -63,6 +63,10 @@ export default function ProfilePage() {
     if (!isEditing) setEditForm({ ...userData });
   }, [userData, isEditing]);
 
+  const displayAvatar = isEditing
+    ? (editForm.avatar && !editForm.avatar.includes("api.dicebear.com") ? editForm.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(editForm.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`)
+    : (settings.user.avatar && !settings.user.avatar.includes("api.dicebear.com") ? settings.user.avatar : `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(settings.user.name || "User")}&backgroundColor=1a2233,3b82f6&textColor=ffffff`);
+
   const handleSaveProfile = () => {
     updateSetting("user", { ...settings.user, ...editForm });
     setIsEditing(false);
@@ -192,7 +196,7 @@ export default function ProfilePage() {
               <div className="h-32 w-32 rounded-3xl border-4 border-ai/30 overflow-hidden shadow-glow transition-transform cursor-pointer">
 
                 <Image 
-                  src={isEditing ? editForm.avatar : settings.user.avatar} 
+                  src={displayAvatar} 
                   alt="Profile" 
                   width={128} 
                   height={128} 
@@ -222,9 +226,9 @@ export default function ProfilePage() {
                     />
                     <input 
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
-                      value={editForm.avatar}
+                      value={editForm.avatar?.includes("api.dicebear.com") ? "" : editForm.avatar}
                       onChange={(e) => setEditForm({ ...editForm, avatar: e.target.value })}
-                      placeholder="Avatar URL"
+                      placeholder="Avatar URL (Optional)"
                     />
                     <input 
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
