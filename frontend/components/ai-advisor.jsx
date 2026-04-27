@@ -135,7 +135,7 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
     <GlassCard className="p-0 overflow-hidden border-ai/10">
       <div className="bg-gradient-to-r from-ai/10 via-transparent to-transparent p-6 border-b border-white/5">
         <SectionHeader
-          eyebrow="Gemini AI"
+          eyebrow="ML & Quantitative Engine"
           title="Portfolio Strategy Assistant"
           action={
             <Pill tone={source === "gemini" ? "profit" : source === "mock" ? "warn" : source === "error" ? "loss" : "ai"}>
@@ -269,7 +269,7 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
 
             {!holdings?.length && (
               <p className="mt-3 text-[10px] text-center text-slate-500 font-bold uppercase tracking-wider">
-                Import portfolio to enable AI audit
+                Import portfolio to enable Strategy Audit
               </p>
             )}
           </div>
@@ -302,7 +302,7 @@ export function GeminiAdvisor({ holdings, allocation, marketCapAllocation, summa
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">AI Intelligence Ready</h3>
                 <p className="text-sm text-slate-500 max-w-sm leading-relaxed mx-auto font-medium">
-                  Select your risk profile and horizon to receive a comprehensive audit powered by Gemini 2.5 Flash.
+                  Select your risk profile and horizon to receive a comprehensive audit powered by XGBoost, Prophet, and LLM Synthesis.
                 </p>
               </div>
             ) : isGenerating ? (
