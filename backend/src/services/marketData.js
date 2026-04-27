@@ -322,12 +322,30 @@ async function fetchGoogleNews(symbol) {
 }
 
 /**
+ * Simple keyword-based sentiment analyzer
+ */
+function analyzeSentiment(title, summary) {
+  const text = `${title} ${summary}`.toLowerCase();
+  
+  const posKeywords = ['profit', 'surge', 'up', 'gain', 'buy', 'bullish', 'positive', 'growth', 'upgrade', 'dividend', 'bonus', 'split', 'order', 'contract', 'high', 'beat', 'success', 'expansion', 'jump', 'soar', 'skyrocket'];
+  const negKeywords = ['loss', 'drop', 'fall', 'down', 'sell', 'bearish', 'negative', 'crash', 'downgrade', 'debt', 'investigation', 'fine', 'penalty', 'low', 'miss', 'fail', 'crisis', 'slump', 'plummet', 'scandal'];
+  
+  let score = 0;
+  posKeywords.forEach(k => { if (text.includes(k)) score++; });
+  negKeywords.forEach(k => { if (text.includes(k)) score--; });
+  
+  if (score > 0) return 'positive';
+  if (score < 0) return 'negative';
+  return 'neutral';
+}
+
+/**
  * Fetch latest news for a specific ticker (Aggregated)
  */
 export async function fetchTickerNews(symbol) {
   try {
     const [yahooNews, googleNews] = await Promise.all([
-      yf.search(symbol, { newsCount: 5 }).then(r => r.news || []).catch(() => []),
+      yf.search(symbol, { newsCount: 10 }).then(r => r.news || []).catch(() => []),
       fetchGoogleNews(symbol)
     ]);
     
@@ -336,18 +354,21 @@ export async function fetchTickerNews(symbol) {
     const unique = [];
     const seenTitles = new Set();
     
-    const SEVEN_DAYS_AGO = Math.floor(Date.now() / 1000) - (10 * 24 * 60 * 60); // Last 10 days
+    const SEVEN_DAYS_AGO = Math.floor(Date.now() / 1000) - (14 * 24 * 60 * 60); // Last 14 days
     
     for (const item of combined) {
       const normalizedTitle = item.title.toLowerCase().trim();
       // Only keep unique, recent news
       if (!seenTitles.has(normalizedTitle) && item.providerPublishTime > SEVEN_DAYS_AGO) {
         seenTitles.add(normalizedTitle);
+        
+        // Add sentiment
+        item.sentiment = analyzeSentiment(item.title, item.summary || item.text || "");
         unique.push(item);
       }
     }
     
-    return unique.sort((a, b) => b.providerPublishTime - a.providerPublishTime).slice(0, 9);
+    return unique.sort((a, b) => b.providerPublishTime - a.providerPublishTime).slice(0, 15);
   } catch (error) {
     console.error(`News fetch error for ${symbol}:`, error.message);
     return [];

@@ -29,6 +29,7 @@ export default function StocksPage() {
   const [growwData, setGrowwData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedSummary, setExpandedSummary] = useState(false);
+  const [newsFilter, setNewsFilter] = useState("all"); // all, positive, negative
 
   useEffect(() => {
     let isMounted = true;
@@ -520,45 +521,71 @@ export default function StocksPage() {
 
       <div className="mt-8">
         <GlassCard className="p-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <SectionHeader eyebrow="Live Feed" title={`Market Intelligence & News`} />
-            <div className="flex gap-2">
-              <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-ai/10 border border-ai/20 text-[10px] font-bold text-ai">
-                <div className="h-1 w-1 rounded-full bg-ai animate-pulse" />
-                LIVE UPDATES
-              </span>
+            <div className="flex p-1 bg-white/5 rounded-2xl border border-white/10 self-start md:self-auto">
+              {['all', 'positive', 'negative'].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setNewsFilter(filter)}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    newsFilter === filter 
+                      ? 'bg-ai text-white shadow-glow' 
+                      : 'text-slate-500 hover:text-white'
+                  }`}
+                >
+                  {filter === 'all' ? 'All Coverage' : filter === 'positive' ? 'Bullish (Positive)' : 'Bearish (Negative)'}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {(growwData?.news?.length > 0 ? growwData.news : keyEvents.slice(0, 3)).map((event, idx) => {
+            {(growwData?.news?.length > 0 ? growwData.news : keyEvents)
+              .filter(event => newsFilter === 'all' || event.sentiment === newsFilter)
+              .map((event, idx) => {
               const thumbnail = event.thumbnail?.resolutions?.[0]?.url;
+              const sentimentColor = event.sentiment === 'positive' ? 'text-profit' : event.sentiment === 'negative' ? 'text-loss' : 'text-ai';
+              const sentimentBg = event.sentiment === 'positive' ? 'bg-profit/10' : event.sentiment === 'negative' ? 'bg-loss/10' : 'bg-ai/10';
+              const sentimentLabel = event.sentiment === 'positive' ? 'Bullish' : event.sentiment === 'negative' ? 'Bearish' : 'Neutral';
+
               return (
                 <div
                   key={event.uuid || idx}
-                  className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-ai/40 transition-all hover:-translate-y-1 group shadow-lg"
+                  className={`flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] overflow-hidden hover:border-ai/40 transition-all hover:-translate-y-1 group shadow-lg ${
+                    event.sentiment === 'positive' ? 'hover:shadow-[0_0_30px_rgba(34,197,94,0.1)]' : 
+                    event.sentiment === 'negative' ? 'hover:shadow-[0_0_30px_rgba(239,68,68,0.1)]' : ''
+                  }`}
                 >
                   {thumbnail && (
                     <div className="relative h-48 w-full overflow-hidden">
                       <img src={thumbnail} alt={event.title} className="w-full h-full object-cover transition-transform duration-700" />
-
                       <div className="absolute inset-0 bg-gradient-to-t from-midnight to-transparent opacity-60" />
-                      <div className="absolute top-4 left-4 bg-ai/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white shadow-lg">
+                      <div className={`absolute top-4 right-4 ${sentimentBg} backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black ${sentimentColor} shadow-lg border border-white/10`}>
+                        {sentimentLabel}
+                      </div>
+                      <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white">
                         {event.publisher || "NEWS"}
                       </div>
                     </div>
                   )}
 
                   <div className={`p-6 flex flex-col flex-1 ${!thumbnail ? "border-t-4 border-ai/40" : ""}`}>
-                    <div className="flex items-center justify-between mb-4">
+                    {!thumbnail && (
+                      <div className="flex items-center justify-between mb-4">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${sentimentBg} ${sentimentColor} px-2 py-0.5 rounded border border-white/5`}>
+                          {sentimentLabel}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          {event.publisher || "Update"}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
                         {event.providerPublishTime ? new Date(event.providerPublishTime * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Just Now"}
                       </span>
-                      {!thumbnail && (
-                        <span className="text-[10px] font-black text-ai uppercase tracking-widest bg-ai/10 px-2 py-0.5 rounded">
-                          {event.publisher || "Update"}
-                        </span>
-                      )}
                     </div>
 
                     <h3 className="text-lg font-bold text-white leading-snug line-clamp-3 group-hover:text-ai transition-colors mb-3">
@@ -571,7 +598,7 @@ export default function StocksPage() {
 
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                        <div className={`h-6 w-6 rounded-md ${sentimentBg} flex items-center justify-center text-[10px] font-bold ${sentimentColor} uppercase`}>
                           {(event.publisher || "M")?.[0]}
                         </div>
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter truncate max-w-[100px]">
@@ -594,9 +621,9 @@ export default function StocksPage() {
             })}
           </div>
 
-          {(!growwData?.news || growwData.news.length === 0) && (
+          {((growwData?.news?.length > 0 ? growwData.news : keyEvents).filter(e => newsFilter === 'all' || e.sentiment === newsFilter).length === 0) && (
             <div className="mt-8 text-center p-12 rounded-3xl border border-dashed border-white/10 text-slate-500">
-              Fetching latest market intelligence...
+              No {newsFilter} news found for this period. Try switching filters.
             </div>
           )}
         </GlassCard>
