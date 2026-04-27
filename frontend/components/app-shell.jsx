@@ -155,6 +155,7 @@ function TopNav({ onNotifications }) {
             alt="Profile"
             width={36}
             height={36}
+            priority
             className="rounded-lg border border-ai/30 object-cover"
           />
         </Link>
