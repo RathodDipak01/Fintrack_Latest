@@ -35,13 +35,13 @@ export default function ProfilePage() {
   const { settings, updateSetting, t, formatCurrency } = useSettings();
   
   const [userData, setUserData] = useState({
-    name: "Deepak Rathod",
-    email: "deepak@fintrack.app",
-    phone: "9876543210",
-    location: "Mumbai, India",
+    name: settings.user.name || "Deepak Rathod",
+    email: settings.user.email || "deepak@fintrack.app",
+    phone: settings.user.phone || "9876543210",
+    location: settings.user.location || "Mumbai, India",
     plan: "Elite",
     memberSince: "April 2024",
-    avatar: "https://api.dicebear.com/8.x/initials/png?seed=Deepak&backgroundColor=1a2233,3b82f6&textColor=ffffff"
+    avatar: settings.user.avatar || "https://api.dicebear.com/8.x/initials/png?seed=Deepak&backgroundColor=1a2233,3b82f6&textColor=ffffff"
   });
 
   useEffect(() => {
@@ -53,10 +53,18 @@ export default function ProfilePage() {
     }
   }, []);
 
-  const [editForm, setEditForm] = useState({ ...settings.user });
+  useEffect(() => {
+    setUserData(prev => ({ ...prev, ...settings.user }));
+  }, [settings.user]);
+
+  const [editForm, setEditForm] = useState({ ...userData });
+
+  useEffect(() => {
+    if (!isEditing) setEditForm({ ...userData });
+  }, [userData, isEditing]);
 
   const handleSaveProfile = () => {
-    updateSetting("user", editForm);
+    updateSetting("user", { ...settings.user, ...editForm });
     setIsEditing(false);
   };
 
@@ -188,6 +196,7 @@ export default function ProfilePage() {
                   alt="Profile" 
                   width={128} 
                   height={128} 
+                  priority
                 />
               </div>
               <div className="absolute -bottom-2 -right-2 bg-ai p-1.5 rounded-full border-4 border-ink">
@@ -204,7 +213,7 @@ export default function ProfilePage() {
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                     placeholder="Your Name"
                   />
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input 
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
                       value={editForm.email}
@@ -223,6 +232,12 @@ export default function ProfilePage() {
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                       maxLength={10}
                       placeholder="9876543210"
+                    />
+                    <input 
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
+                      value={editForm.location}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      placeholder="Location"
                     />
                   </div>
                 </div>

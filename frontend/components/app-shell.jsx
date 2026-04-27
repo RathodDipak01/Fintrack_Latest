@@ -20,7 +20,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { alerts } from "@/lib/portfolio-data";
 import { GlassCard, Pill } from "@/components/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -83,6 +83,13 @@ function NotificationDrawer({ open, onClose }) {
 function TopNav({ onNotifications }) {
   const pathname = usePathname();
   const { t, settings } = useSettings();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLoggedIn(!!localStorage.getItem("fintrack_token") || !!localStorage.getItem("fintrack_user"));
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-ink/78 backdrop-blur-xl">
@@ -123,13 +130,15 @@ function TopNav({ onNotifications }) {
         <div className="hidden md:block">
           <ThemeToggle compact />
         </div>
-        <Link
-          href="/login"
-          className="hidden rounded-md border border-ai/30 bg-ai/10 px-3 py-2 text-sm font-semibold text-ai transition hover:bg-ai hover:text-white sm:flex"
-        >
-          <LogIn size={16} className="mr-2" />
-          {t("login") || "Login"}
-        </Link>
+        {!isLoggedIn && (
+          <Link
+            href="/login"
+            className="hidden rounded-md border border-ai/30 bg-ai/10 px-3 py-2 text-sm font-semibold text-ai transition hover:bg-ai hover:text-white sm:flex"
+          >
+            <LogIn size={16} className="mr-2" />
+            {t("login") || "Login"}
+          </Link>
+        )}
         <Link href="/profile" className="transition hover:opacity-80">
           <Image
             src={settings.user.avatar}
