@@ -554,24 +554,66 @@ export async function getTrendingStocks() {
       
       if (!quotes || quotes.length === 0) throw new Error("No quotes returned");
 
-      return quotes.map(q => ({
-        symbol: q.symbol.replace('.NS', ''),
-        name: q.longName || q.shortName || q.symbol,
-        price: q.regularMarketPrice || 0,
-        changePercent: q.regularMarketChangePercent?.toFixed(2) || "0.00",
-        marketCap: q.marketCap || 0,
-        volume: q.regularMarketVolume || 0
+      return await Promise.all(quotes.map(async (q) => {
+        let price = q.regularMarketPrice || 0;
+        let changePercent = q.regularMarketChangePercent?.toFixed(2) || "0.00";
+
+        // If Yahoo returned 0 (rate limited), try Groww
+        if (price === 0) {
+          const cleanSym = q.symbol.split('.')[0];
+          try {
+            const growwRes = await fetch(`https://groww.in/v1/api/stocks_data/v1/tr_live_prices/exchange/NSE/segment/CASH/${cleanSym}/latest`, {
+              headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            if (growwRes.ok) {
+              const gData = await growwRes.ok ? await growwRes.json() : null;
+              if (gData && gData.ltp) {
+                price = gData.ltp;
+                changePercent = gData.dayChangePerc?.toFixed(2) || "0.00";
+              }
+            }
+          } catch (e) {
+            console.warn(`Groww fallback failed for ${cleanSym}`);
+          }
+        }
+
+        return {
+          symbol: q.symbol.replace('.NS', ''),
+          name: q.longName || q.shortName || q.symbol,
+          price: price,
+          changePercent: changePercent,
+          marketCap: q.marketCap || 0,
+          volume: q.regularMarketVolume || 0
+        };
       }));
     } catch (quoteErr) {
       console.error("Resilient Trending Fallback Triggered:", quoteErr.message);
-      // Even if quote fetch fails, return symbols so AI can still generate tips (though price will be 0)
-      return FALLBACK_SYMBOLS.map(s => ({
-        symbol: s.replace('.NS', ''),
-        name: s.replace('.NS', ''),
-        price: 0,
-        changePercent: "0.00",
-        marketCap: 0,
-        volume: 0
+      
+      // Secondary fallback: Try to fetch prices for static symbols directly from Groww
+      return await Promise.all(FALLBACK_SYMBOLS.map(async (s) => {
+        const cleanSym = s.replace('.NS', '');
+        let price = 0;
+        let changePercent = "0.00";
+
+        try {
+          const growwRes = await fetch(`https://groww.in/v1/api/stocks_data/v1/tr_live_prices/exchange/NSE/segment/CASH/${cleanSym}/latest`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+          });
+          if (growwRes.ok) {
+            const gData = await growwRes.json();
+            price = gData.ltp || 0;
+            changePercent = gData.dayChangePerc?.toFixed(2) || "0.00";
+          }
+        } catch (e) {}
+
+        return {
+          symbol: cleanSym,
+          name: cleanSym,
+          price: price,
+          changePercent: changePercent,
+          marketCap: 0,
+          volume: 0
+        };
       }));
     }
   } catch (error) {
