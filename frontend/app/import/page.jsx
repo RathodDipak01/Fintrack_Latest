@@ -330,13 +330,22 @@ export default function ImportPortfolioPage() {
 
       {/* Angel One Modal */}
       {showAngelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative my-8">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">Connect Angel One</h2>
               <button onClick={() => setShowAngelModal(false)} className="text-slate-400 hover:text-white transition">
                 <XCircle size={24} />
               </button>
+            </div>
+            
+            <div className="mb-6 rounded-lg border border-ai/20 bg-ai/5 p-4 text-sm text-slate-300">
+              <p className="font-semibold text-ai mb-2">How to get your credentials:</p>
+              <ol className="list-decimal pl-4 space-y-1.5 text-xs text-slate-400">
+                <li>Register at <a href="https://smartapi.angelbroking.com/" target="_blank" rel="noopener noreferrer" className="text-white hover:underline font-medium">SmartAPI</a> with your Client ID.</li>
+                <li>Create an App to instantly get your <strong>API Key</strong>.</li>
+                <li>Enable TOTP on SmartAPI site and copy the <strong>TOTP Secret Code</strong> (e.g., JGPG...) before scanning the QR.</li>
+              </ol>
             </div>
             <form onSubmit={handleAngelSubmit} className="space-y-4">
               <div>
