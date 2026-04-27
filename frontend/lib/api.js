@@ -140,3 +140,29 @@ export const fintrackApi = {
     fetchWithAuth(`/ai/orchestrate/${encodeURIComponent(symbol)}`, { method: "GET" }),
 };
 
+export const isIndianMarketOpen = () => {
+  const now = new Date();
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', { 
+      timeZone: 'Asia/Kolkata', 
+      hour12: false, 
+      hour: 'numeric', 
+      minute: 'numeric', 
+      weekday: 'short' 
+    });
+    const parts = formatter.formatToParts(now);
+    const hour = parseInt(parts.find(p => p.type === 'hour').value);
+    const minute = parseInt(parts.find(p => p.type === 'minute').value);
+    const day = parts.find(p => p.type === 'weekday').value;
+    
+    if (['Sat', 'Sun'].includes(day)) return false;
+    
+    const timeInMinutes = hour * 60 + minute;
+    // 9:15 AM to 3:30 PM IST
+    return timeInMinutes >= (9 * 60 + 15) && timeInMinutes <= (15 * 60 + 30);
+  } catch (e) {
+    // Fallback to true if timezone logic fails
+    return true;
+  }
+};
+

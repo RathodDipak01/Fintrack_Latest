@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Plus, Check, GripVertical } from "lucide-react";
 import { Reorder } from "framer-motion";
-import { fintrackApi } from "@/lib/api";
+import { fintrackApi, isIndianMarketOpen } from "@/lib/api";
 
 // Initial static data before backend fetches
 const FALLBACK_INDICES = [
@@ -79,7 +79,11 @@ export function MarketTicker() {
     }
 
     fetchIndices();
-    const interval = setInterval(fetchIndices, 10000);
+    const interval = setInterval(() => {
+      // If market is closed and we already have data, skip the poll
+      if (!isIndianMarketOpen() && masterIndices !== FALLBACK_INDICES) return;
+      fetchIndices();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 

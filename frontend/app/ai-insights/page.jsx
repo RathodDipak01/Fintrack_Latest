@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { GlassCard, Pill, SectionHeader } from "@/components/ui";
 import { alerts, holdings } from "@/lib/portfolio-data";
 import { GeminiAdvisor } from "@/components/ai-advisor";
-import { fintrackApi } from "@/lib/api";
+import { fintrackApi, isIndianMarketOpen } from "@/lib/api";
 
 export default function AiInsightsPage() {
   const [portfolioSummary, setPortfolioSummary] = useState(null);
@@ -35,8 +35,10 @@ export default function AiInsightsPage() {
       }
     }).catch(() => null);
 
-    // Poll for live portfolio updates
-    const interval = setInterval(fetchData, 10000);
+    // Poll for live portfolio updates - only if market is likely open
+    const interval = setInterval(() => {
+      if (isIndianMarketOpen()) fetchData();
+    }, 10000);
 
     return () => {
       isMounted = false;

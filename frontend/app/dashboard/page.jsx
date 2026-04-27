@@ -39,7 +39,7 @@ import { MarketTicker } from "@/components/market-ticker";
 import { DonutChart } from "@/components/charts";
 import { StockSearchBar } from "@/components/stock-search-bar";
 import { FeatureGuard } from "@/components/feature-guard";
-import { fintrackApi } from "@/lib/api";
+import { fintrackApi, isIndianMarketOpen } from "@/lib/api";
 import TradingViewWidget from "@/components/tradingview-widget";
 import CustomChart from "@/components/custom-chart";
 import {
@@ -1217,8 +1217,10 @@ export default function Home() {
       }
     }).catch(() => null);
     
-    // Poll every 10 seconds for real-time updates
-    const interval = setInterval(fetchData, 10000);
+    // Poll every 10 seconds for real-time updates - skip if market closed
+    const interval = setInterval(() => {
+      if (isIndianMarketOpen()) fetchData();
+    }, 10000);
     
     return () => {
       isMounted = false;
