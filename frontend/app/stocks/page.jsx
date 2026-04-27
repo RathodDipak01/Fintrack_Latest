@@ -90,6 +90,14 @@ export default function StocksPage() {
     { investor: "Retail & Others", values: shKeys.map(k => growwData.shareHoldingPattern[k]?.retailAndOthers?.percent?.toFixed(2) || "0.00") }
   ] : null;
 
+  // Market Range Fallbacks (Exhaustive check across all possible field names from Yahoo/Groww/Google)
+  const dayLow = quote?.dayLow || growwData?.stats?.low || growwData?.stats?.lowPrice || growwData?.stats?.dayLow;
+  const dayHigh = quote?.dayHigh || growwData?.stats?.high || growwData?.stats?.highPrice || growwData?.stats?.dayHigh;
+  const fiftyTwoWeekLow = quote?.fiftyTwoWeekLow || growwData?.stats?.min52W || growwData?.stats?.low52W || growwData?.stats?.low52Week || growwData?.stats?.min52Week;
+  const fiftyTwoWeekHigh = quote?.fiftyTwoWeekHigh || growwData?.stats?.max52W || growwData?.stats?.high52W || growwData?.stats?.high52Week || growwData?.stats?.max52Week;
+  const openPrice = quote?.open || growwData?.stats?.open || growwData?.stats?.openPrice;
+  const prevClose = quote?.prevClose || growwData?.stats?.close || growwData?.stats?.prevClosePrice || growwData?.stats?.lastClose;
+
   return (
     <AppShell>
       <div className="mb-8">
@@ -394,68 +402,7 @@ export default function StocksPage() {
       </section>
 
       {/* Intelligence & Technicals Row */}
-      <section className="grid gap-6 xl:grid-cols-3 mb-6 items-stretch">
-        <GlassCard className="p-6 h-full flex flex-col">
-          <SectionHeader eyebrow="Performance" title="Market Range" />
-          <div className="mt-6 flex-1 space-y-6 flex flex-col justify-center">
-            {/* Today's Range */}
-            <div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2">
-                <span>Today's Low</span>
-                <span>Today's High</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold text-white mb-2">
-                <span>₹{quote?.dayLow?.toLocaleString('en-IN') || "N/A"}</span>
-                <span>₹{quote?.dayHigh?.toLocaleString('en-IN') || "N/A"}</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
-                <div
-                  className="absolute h-full bg-ai shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000"
-                  style={{
-                    left: `${((quote?.price - quote?.dayLow) / (quote?.dayHigh - quote?.dayLow)) * 100}%`,
-                    width: '4px',
-                    transform: 'translateX(-50%)'
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* 52W Range */}
-            <div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase mb-2">
-                <span>52W Low</span>
-                <span>52W High</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold text-white mb-2">
-                <span>₹{quote?.fiftyTwoWeekLow?.toLocaleString('en-IN') || "N/A"}</span>
-                <span>₹{quote?.fiftyTwoWeekHigh?.toLocaleString('en-IN') || "N/A"}</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full relative overflow-hidden">
-                <div
-                  className="absolute h-full bg-profit shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000"
-                  style={{
-                    left: `${((quote?.price - quote?.fiftyTwoWeekLow) / (quote?.fiftyTwoWeekHigh - quote?.fiftyTwoWeekLow)) * 100}%`,
-                    width: '4px',
-                    transform: 'translateX(-50%)'
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Open/Close */}
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Open</span>
-                <div className="text-sm font-bold text-white mt-0.5">₹{quote?.open?.toLocaleString('en-IN') || "N/A"}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Prev Close</span>
-                <div className="text-sm font-bold text-white mt-0.5">₹{quote?.prevClose?.toLocaleString('en-IN') || "N/A"}</div>
-              </div>
-            </div>
-          </div>
-        </GlassCard>
-
+      <section className="grid gap-6 md:grid-cols-2 mb-6 items-stretch">
         <GlassCard className="p-6 h-full flex flex-col">
           <SectionHeader eyebrow="Valuation" title="Pricing Intelligence" />
           <div className="mt-6 space-y-4 flex-1">

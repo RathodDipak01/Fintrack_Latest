@@ -123,6 +123,55 @@ export async function searchStocks(query) {
   }
 }
 
+async function fetchGoogleFinanceRange(symbol) {
+  try {
+    const cleanSymbol = symbol.split('.')[0].toUpperCase();
+    // Try NSE first, then BSE (BOM)
+    const exchanges = ['NSE', 'BOM'];
+    let html = '';
+    
+    for (const exch of exchanges) {
+      const url = `https://www.google.com/finance/quote/${cleanSymbol}:${exch}`;
+      const res = await fetch(url, { 
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } 
+      });
+      if (res.ok) {
+        html = await res.text();
+        if (html.includes('data-last-price')) break; // Found valid page
+      }
+    }
+
+    if (!html) return null;
+    
+    const extractValue = (label) => {
+      // Look for the label followed by a value in a div or span
+      const regex = new RegExp(`>\\s*${label}\\s*<[\\s\\S]*?>\\s*(?:₹|Rs\\.?|\\$)?\\s*([\\d,\\.\\-]+)`, 'i');
+      const match = html.match(regex);
+      return match ? parseFloat(match[1].replace(/,/g, '')) : null;
+    };
+
+    const extractRange = (label) => {
+      const regex = new RegExp(`>\\s*${label}\\s*<[\\s\\S]*?>\\s*(?:₹|Rs\\.?|\\$)?\\s*([\\d,\\.\\-]+)\\s*-\\s*(?:₹|Rs\\.?|\\$)?\\s*([\\d,\\.\\-]+)`, 'i');
+      const match = html.match(regex);
+      return match ? { low: parseFloat(match[1].replace(/,/g, '')), high: parseFloat(match[2].replace(/,/g, '')) } : null;
+    };
+
+    const dayRange = extractRange("Day range");
+    const yearRange = extractRange("52-week range");
+    
+    return {
+      dayLow: dayRange?.low || extractValue("Low"),
+      dayHigh: dayRange?.high || extractValue("High"),
+      fiftyTwoWeekLow: yearRange?.low,
+      fiftyTwoWeekHigh: yearRange?.high,
+      open: extractValue("Open"),
+      prevClose: extractValue("Previous close")
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function getStockQuote(symbol) {
   if (!symbol) throw new Error("Symbol is required");
   try {
@@ -148,6 +197,9 @@ export async function getStockQuote(symbol) {
       throw new Error("No quote found");
     }
 
+    // NEW: Fetch Google Finance range data as a fallback for missing fields
+    const googleData = await fetchGoogleFinanceRange(symbol);
+
     return {
       symbol: quoteResult.symbol,
       name: quoteResult.shortName || quoteResult.longName || quoteResult.symbol,
@@ -159,12 +211,12 @@ export async function getStockQuote(symbol) {
       volume: quoteResult.regularMarketVolume,
       recommendation: quoteResult.recommendationKey,
       analystRating: quoteResult.averageAnalystRating,
-      dayLow: quoteResult.regularMarketDayLow,
-      dayHigh: quoteResult.regularMarketDayHigh,
-      fiftyTwoWeekLow: quoteResult.fiftyTwoWeekLow,
-      fiftyTwoWeekHigh: quoteResult.fiftyTwoWeekHigh,
-      open: quoteResult.regularMarketOpen,
-      prevClose: quoteResult.regularMarketPreviousClose
+      dayLow: quoteResult.regularMarketDayLow || googleData?.dayLow,
+      dayHigh: quoteResult.regularMarketDayHigh || googleData?.dayHigh,
+      fiftyTwoWeekLow: quoteResult.fiftyTwoWeekLow || googleData?.fiftyTwoWeekLow,
+      fiftyTwoWeekHigh: quoteResult.fiftyTwoWeekHigh || googleData?.fiftyTwoWeekHigh,
+      open: quoteResult.regularMarketOpen || googleData?.open,
+      prevClose: quoteResult.regularMarketPreviousClose || googleData?.prevClose
     };
   } catch (error) { 
     console.error(`Quote error for ${symbol}:`, error.message);
