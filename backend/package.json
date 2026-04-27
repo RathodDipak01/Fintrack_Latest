@@ -22,6 +22,7 @@
     "nodemailer": "^8.0.7",
     "otplib": "^13.4.0",
     "pg": "^8.20.0",
+    "resend": "^6.12.2",
     "smartapi-javascript": "^1.0.27",
     "upstox-js-sdk": "^2.26.0",
     "yahoo-finance2": "^2.11.3",

@@ -35,27 +35,44 @@ export default function ProfilePage() {
   const { settings, updateSetting, t, formatCurrency } = useSettings();
   
   const [userData, setUserData] = useState({
-    name: settings.user.name || "Deepak Rathod",
-    email: settings.user.email || "deepak@fintrack.app",
-    phone: settings.user.phone || "9876543210",
-    location: settings.user.location || "Mumbai, India",
-    plan: "Elite",
-    memberSince: "April 2024",
-    avatar: settings.user.avatar || "https://api.dicebear.com/8.x/initials/png?seed=Deepak&backgroundColor=1a2233,3b82f6&textColor=ffffff"
+    name: "",
+    email: "",
+    location: "Global",
+    plan: "Lite",
+    memberSince: "Joined Recently",
+    avatar: ""
   });
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("fintrack_user") || "{}");
-    if (storedUser.email === "deepak@fintrack.app") {
-      setUserData(prev => ({ ...prev, plan: "Elite (Superuser)", email: storedUser.email }));
-    } else if (storedUser.plan) {
-      setUserData(prev => ({ ...prev, plan: storedUser.plan.charAt(0).toUpperCase() + storedUser.plan.slice(1), email: storedUser.email }));
-    }
-  }, []);
+    const fetchUser = async () => {
+      try {
+        const user = await fintrackApi.getMe();
+        if (user) {
+          setUserData({
+            name: user.fullName || "Fintrack User",
+            email: user.email,
+            location: user.location || "Global",
+            plan: user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : "Lite",
+            memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : "Joined Recently",
+            avatar: user.avatar || `https://api.dicebear.com/8.x/initials/png?seed=${encodeURIComponent(user.fullName || user.email)}&backgroundColor=1a2233,3b82f6&textColor=ffffff`
+          });
+        }
+      } catch (err) {
+        // Fallback to localStorage if API fails
+        const storedUser = JSON.parse(localStorage.getItem("fintrack_user") || "{}");
+        if (storedUser.email) {
+          setUserData(prev => ({
+            ...prev,
+            name: storedUser.fullName || "Fintrack User",
+            email: storedUser.email,
+            plan: storedUser.plan ? storedUser.plan.charAt(0).toUpperCase() + storedUser.plan.slice(1) : "Lite"
+          }));
+        }
+      }
+    };
 
-  useEffect(() => {
-    setUserData(prev => ({ ...prev, ...settings.user }));
-  }, [settings.user]);
+    fetchUser();
+  }, []);
 
   const [editForm, setEditForm] = useState({ ...userData });
 
@@ -238,13 +255,6 @@ export default function ProfilePage() {
                     />
                     <input 
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                      maxLength={10}
-                      placeholder="9876543210"
-                    />
-                    <input 
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-slate-300 text-sm focus:border-ai outline-none"
                       value={editForm.location}
                       onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                       placeholder="Location"
@@ -261,10 +271,6 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Mail size={16} className="text-ai" />
                       <span className="text-sm">{userData.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone size={16} className="text-ai" />
-                      <span className="text-sm">{userData.phone}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-ai" />

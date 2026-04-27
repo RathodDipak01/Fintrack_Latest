@@ -12,9 +12,9 @@ export function SettingsProvider({ children }) {
     alerts: "Push + Email",
     theme: "Dark (Cyber)",
     user: {
-      name: "Deepak Rathod",
-      email: "deepak@fintrack.app",
-      avatar: "https://api.dicebear.com/8.x/initials/png?seed=Deepak&backgroundColor=1a2233,3b82f6&textColor=ffffff"
+      name: "",
+      email: "",
+      avatar: ""
     }
   });
 
@@ -73,18 +73,34 @@ export function SettingsProvider({ children }) {
   // Persist settings to localStorage
   useEffect(() => {
     const saved = localStorage.getItem("fintrack_settings");
+    const storedUser = JSON.parse(localStorage.getItem("fintrack_user") || "{}");
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         setSettings(prev => ({
           ...prev,
           ...parsed,
-          // Ensure nested user object is also merged/preserved
-          user: parsed.user ? { ...prev.user, ...parsed.user } : prev.user
+          user: {
+            ...prev.user,
+            name: storedUser.fullName || parsed.user?.name || "User",
+            email: storedUser.email || parsed.user?.email || "",
+            avatar: storedUser.avatar || parsed.user?.avatar || ""
+          }
         }));
       } catch (e) {
         console.error("Failed to parse settings", e);
       }
+    } else if (storedUser.email) {
+      setSettings(prev => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          name: storedUser.fullName || "User",
+          email: storedUser.email,
+          avatar: storedUser.avatar || ""
+        }
+      }));
     }
     setHydrated(true);
   }, []);

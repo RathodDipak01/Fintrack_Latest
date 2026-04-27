@@ -21,5 +21,7 @@ export const env = {
   upstoxApiSecret: process.env.UPSTOX_API_SECRET || "",
   growwApiKey: process.env.GROWW_API_KEY || "",
   growwApiSecret: process.env.GROWW_API_SECRET || "",
-  databaseUrl: process.env.DATABASE_URL || ""
+  databaseUrl: process.env.DATABASE_URL || "",
+  emailApiKey: process.env.EMAIL_API_KEY || "",
+  emailFrom: process.env.EMAIL_FROM || "onboarding@resend.dev"
 };
